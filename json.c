@@ -1,5 +1,5 @@
 /******
-* JSON Parser & Exporter   (code Stella)
+* JSON Parser & Exporter
 * 
 * by. Cory Chiang
 * 
