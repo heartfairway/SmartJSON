@@ -3,10 +3,12 @@
 * 
 * by. Cory Chiang
 * 
+*   V. 2.0.0 (2019/1/11)
+*
 
 BSD 3-Clause License
 
-Copyright (c) 2017, Cory Chiang
+Copyright (c) 2019, Cory Chiang
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -48,12 +50,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /* forward reference declaration */
 void _SJSNbuildVAL(struct SJSN_SHELL* sh);
-char* _SJSNexportVAL(struct SJSN_VAL* val, char* buf, int size, int* err);
+char* _SJSNexportVAL(struct SJSN_VA* val, char* buf, int size, int* err);
 
 void _SJSNskipBLANK(struct SJSN_SHELL* sh);
 unsigned int _SJSNhashIDX(char* name);
 
-struct SJSN_OBJ* _SJSNObjMultiQuery_last_ptr=NULL;
+struct SJSN_VB* _SJSNObjMultiQuery_last_ptr=NULL;
 
 /* parsing */
 inline void _SJSNskipBLANK(struct SJSN_SHELL* sh)
@@ -108,7 +110,8 @@ void _SJSNmatchSTRING(struct SJSN_SHELL* sh)
 	}
 	
 	sh->p_stack[sh->p_level]->type=SJSN_VAL_STRING;
-	sh->p_stack[sh->p_level]->res.string=str;
+	sh->p_stack[sh->p_level]->data.string=str;
+	
 	return;
 }
 
@@ -164,19 +167,17 @@ void _SJSNmatchNUMBER(struct SJSN_SHELL* sh)
 	
 	if(real) {
 		sh->p_stack[sh->p_level]->type=SJSN_VAL_REALNUM;
-		sh->p_stack[sh->p_level]->res.realnum=atof(num)*pow(10, atoi(exp)); // atof() prototype returns double
+		sh->p_stack[sh->p_level]->data.realnum=atof(num)*pow(10, atoi(exp)); // atof() prototype returns double
 	}
 	else {
 		sh->p_stack[sh->p_level]->type=SJSN_VAL_INTEGER;
-		sh->p_stack[sh->p_level]->res.integer=atoll(num);
+		sh->p_stack[sh->p_level]->data.integer=atoll(num);
 	}
 }
 
 void _SJSNmatchOBJECT(struct SJSN_SHELL* sh)
 {
-	struct SJSN_VAL* VPtr;
-	struct SJSN_OBJ* OPtr;
-	struct SJSN_OBJ* FOPtr;
+	struct SJSN_VB *OPtr, *FOPtr;
 	
 	if(sh->str[sh->p_ptr]!='{') {
 		sh->error_code=SJSN_SYNTAX_ERROR;
@@ -184,23 +185,21 @@ void _SJSNmatchOBJECT(struct SJSN_SHELL* sh)
 	}
 	
 	// generate object descriptor node
-	VPtr=sh->p_stack[sh->p_level];
-	OPtr=malloc(sizeof(struct SJSN_OBJ));
+	OPtr=malloc(sizeof(struct SJSN_VB));
 	
-	VPtr->type=SJSN_VAL_OBJECT;
-	VPtr->res.object=OPtr;
+	sh->p_stack[sh->p_level]->type=SJSN_VAL_OBJECT;
+	sh->p_stack[sh->p_level]->data.object=OPtr;
 
 	sh->p_ptr++;
 	
 	// prepare 1st obkect element for parsing
-	FOPtr=NULL;
+	FOPtr=NULL; // latest finished object element
 	
-	OPtr->value=malloc(sizeof(struct SJSN_VAL));
-	OPtr->value->type=SJSN_VAL_NULL;
+	OPtr->type=SJSN_VAL_NULL;
 	OPtr->next=NULL;
 	
 	sh->p_level++;
-	sh->p_stack[sh->p_level]=OPtr->value;
+	sh->p_stack[sh->p_level]=(struct SJSN_VA*)OPtr;
 	
 	while(1) {
 		_SJSNskipBLANK(sh);
@@ -225,15 +224,15 @@ void _SJSNmatchOBJECT(struct SJSN_SHELL* sh)
 		_SJSNbuildVAL(sh);
 		if(sh->error_code==SJSN_OK) {
 			// if no error, prepare next object element
+			//OPtr->type|=0x80; ///TODO: it's necessary?
 			FOPtr=OPtr;
-			OPtr->next=malloc(sizeof(struct SJSN_OBJ));
+			OPtr->next=malloc(sizeof(struct SJSN_VB));
 			OPtr=OPtr->next;
 			
-			OPtr->value=malloc(sizeof(struct SJSN_VAL));
-			OPtr->value->type=SJSN_VAL_NULL;
+			OPtr->type=SJSN_VAL_NULL;
 			OPtr->next=NULL;
 
-			sh->p_stack[sh->p_level]=OPtr->value; // same layer, just next value
+			sh->p_stack[sh->p_level]=(struct SJSN_VA*)OPtr; // same layer, just next value
 		}
 
 		_SJSNskipBLANK(sh);
@@ -266,33 +265,29 @@ void _SJSNmatchOBJECT(struct SJSN_SHELL* sh)
 
 void _SJSNmatchARRAY(struct SJSN_SHELL* sh)
 {
-	struct SJSN_VAL* VPtr;
-	struct SJSN_ARR* APtr;
-	struct SJSN_ARR* FAPtr;
+	struct SJSN_VA *APtr, *FAPtr;
 	
 	if(sh->str[sh->p_ptr]!='[') {
 		sh->error_code=SJSN_SYNTAX_ERROR;
 		return;
 	}
 	
-	// generate array descriptor node
-	VPtr=sh->p_stack[sh->p_level];
-	APtr=malloc(sizeof(struct SJSN_ARR));
+	// generate first array element
+	APtr=malloc(sizeof(struct SJSN_VA));
 	
-	VPtr->type=SJSN_VAL_ARRAY;
-	VPtr->res.array=APtr;
+	sh->p_stack[sh->p_level]->type=SJSN_VAL_ARRAY;
+	sh->p_stack[sh->p_level]->data.array=APtr;
 
 	sh->p_ptr++;
 	
 	// prepare 1st array element for parsing
-	FAPtr=NULL;
+	FAPtr=NULL; // latest finished array element
 	
-	APtr->value=malloc(sizeof(struct SJSN_VAL));
-	APtr->value->type=SJSN_VAL_NULL;
+	APtr->type=SJSN_VAL_NULL;
 	APtr->next=NULL;
 	
 	sh->p_level++;
-	sh->p_stack[sh->p_level]=APtr->value;
+	sh->p_stack[sh->p_level]=APtr;
 	
 	while(1) {
 		_SJSNskipBLANK(sh);
@@ -301,14 +296,13 @@ void _SJSNmatchARRAY(struct SJSN_SHELL* sh)
 		if(sh->error_code==SJSN_OK) {
 			// if no error, prepare next array element
 			FAPtr=APtr;
-			APtr->next=malloc(sizeof(struct SJSN_ARR));
+			APtr->next=malloc(sizeof(struct SJSN_VA));
 			APtr=APtr->next;
 			
-			APtr->value=malloc(sizeof(struct SJSN_VAL));
-			APtr->value->type=SJSN_VAL_NULL;
+			APtr->type=SJSN_VAL_NULL;
 			APtr->next=NULL;
-
-			sh->p_stack[sh->p_level]=APtr->value; // same layer, just next value
+			
+			sh->p_stack[sh->p_level]=APtr; // same layer, just next value
 		}
 		else return;
 
@@ -461,6 +455,7 @@ void _SJSNbuildVAL(struct SJSN_SHELL* sh)
 {
 	// assuming this value is null, in case of error
 	sh->p_stack[sh->p_level]->type=SJSN_VAL_NULL;
+	sh->p_stack[sh->p_level]->next=NULL;
 	
 	// skip non-graph characters
 	_SJSNskipBLANK(sh);
@@ -477,23 +472,22 @@ void _SJSNbuildVAL(struct SJSN_SHELL* sh)
 	else if(sh->str[sh->p_ptr]=='t' || sh->str[sh->p_ptr]=='T') _SJSNmatchTRUE(sh); // true
 	else if(sh->str[sh->p_ptr]=='f' || sh->str[sh->p_ptr]=='F') _SJSNmatchFALSE(sh); // false
 	else if(sh->str[sh->p_ptr]=='n' || sh->str[sh->p_ptr]=='N') _SJSNmatchNULL(sh); // null
-	else {
-		// phrase error
+	else {	// phrase error
 		sh->error_code=SJSN_PHRASE_ERROR;
 		return;
 	}
 }
 
-struct SJSN_VAL* SJNSParse(struct SJSN_SHELL* sh)
+struct SJSN_VA* SJNSParse(struct SJSN_SHELL* sh)
 {
-	struct SJSN_VAL* rval;
+	struct SJSN_VA* rval;
 	
 	/* error hand */
 	if(!sh) return NULL;
 	if(!sh->str) return NULL;
 
 	/* initial */
-	rval=malloc(sizeof(struct SJSN_VAL));
+	rval=malloc(sizeof(struct SJSN_VA));
 	
 	sh->error_code=SJSN_OK; // mark for continuous parsing
 	sh->p_ptr=0;
@@ -515,7 +509,7 @@ struct SJSN_VAL* SJNSParse(struct SJSN_SHELL* sh)
 	return rval;
 }
 
-struct SJSN_VAL* SJNSQuickParse(char* src)
+struct SJSN_VA* SJNSQuickParse(char* src)
 {
 	struct SJSN_SHELL shell;
 	
@@ -566,7 +560,7 @@ char* _SJSNcapSTRING(char* dst, char* src)
 	return &dst[i];
 }
 
-char* _SJSNexportOBJ(struct SJSN_OBJ* obj, char* buf, int size, int* err)
+char* _SJSNexportOBJ(struct SJSN_VB* obj, char* buf, int size, int* err)
 {
 	char* tbuf;
 	
@@ -578,7 +572,7 @@ char* _SJSNexportOBJ(struct SJSN_OBJ* obj, char* buf, int size, int* err)
 		tbuf=_SJSNcapSTRING(tbuf, obj->name);
 		*(tbuf++)=':';
 		
-		tbuf=_SJSNexportVAL(obj->value, tbuf, size-(int)(tbuf-buf), err);
+		tbuf=_SJSNexportVAL((struct SJSN_VA*)obj, tbuf, size-(int)(tbuf-buf), err);
 		*(tbuf++)=',';
 		
 		// error return
@@ -595,7 +589,7 @@ char* _SJSNexportOBJ(struct SJSN_OBJ* obj, char* buf, int size, int* err)
 	return tbuf;
 }
 
-char* _SJSNexportARR(struct SJSN_ARR* arr, char* buf, int size, int* err)
+char* _SJSNexportARR(struct SJSN_VA* arr, char* buf, int size, int* err)
 {
 	char* tbuf;
 	
@@ -604,7 +598,7 @@ char* _SJSNexportARR(struct SJSN_ARR* arr, char* buf, int size, int* err)
 	*(tbuf++)='[';
 	
 	while(arr) {
-		tbuf=_SJSNexportVAL(arr->value, tbuf, size-(int)(tbuf-buf), err);
+		tbuf=_SJSNexportVAL(arr, tbuf, size-(int)(tbuf-buf), err);
 		*(tbuf++)=',';
 		
 		// error return
@@ -621,7 +615,7 @@ char* _SJSNexportARR(struct SJSN_ARR* arr, char* buf, int size, int* err)
 	return tbuf;
 }
 
-char* _SJSNexportVAL(struct SJSN_VAL* val, char* buf, int size, int* err)
+char* _SJSNexportVAL(struct SJSN_VA* val, char* buf, int size, int* err)
 {	
 	switch(val->type) {
 		case SJSN_VAL_NULL:
@@ -654,14 +648,14 @@ char* _SJSNexportVAL(struct SJSN_VAL* val, char* buf, int size, int* err)
 				return buf;
 			}
 			
-			return _SJSNexportOBJ(val->res.object, buf, size, err);
+			return _SJSNexportOBJ(val->data.object, buf, size, err);
 		case SJSN_VAL_ARRAY:
 			if(size<3) {
 				*err=SJSN_OUT_OF_BUF;
 				return buf;
 			}
 			
-			return _SJSNexportARR(val->res.array, buf, size, err);
+			return _SJSNexportARR(val->data.array, buf, size, err);
 		case SJSN_VAL_REALNUM:
 			///TODO: digit accuracy
 			if(size<16) {
@@ -669,7 +663,7 @@ char* _SJSNexportVAL(struct SJSN_VAL* val, char* buf, int size, int* err)
 				return buf;
 			}
 			
-			sprintf(buf, "%lf", val->res.realnum);			
+			sprintf(buf, "%lf", val->data.realnum);			
 			break;
 		case SJSN_VAL_INTEGER:
 			if(size<33) {
@@ -678,16 +672,16 @@ char* _SJSNexportVAL(struct SJSN_VAL* val, char* buf, int size, int* err)
 			}
 			
 			//itoa(val->res.integer, buf, 10);
-			sprintf(buf, "%d", val->res.integer);
+			sprintf(buf, "%d", val->data.integer);
 			break;
 		case SJSN_VAL_STRING:
 			// add some overhead for escape 
-			if(size < strlen(val->res.string)+20) {
+			if(size < strlen(val->data.string)+20) {
 				*err=SJSN_OUT_OF_BUF;
 				return buf;
 			}
 			
-			return _SJSNcapSTRING(buf, val->res.string);
+			return _SJSNcapSTRING(buf, val->data.string);
 		default:
 			*err=SJSN_EXPORT_TYPE;
 			return buf;
@@ -699,7 +693,7 @@ char* _SJSNexportVAL(struct SJSN_VAL* val, char* buf, int size, int* err)
 	return buf;
 }
 
-int SJSNExport(struct SJSN_VAL* val, char* buf, int size)
+int SJSNExport(struct SJSN_VA* val, char* buf, int size)
 {
 	int err;
 	
@@ -711,12 +705,12 @@ int SJSNExport(struct SJSN_VAL* val, char* buf, int size)
 
 /* free, memory recycle */
 
-void _SJSNfreeOBJECT(struct SJSN_OBJ* obj)
+void _SJSNfreeOBJECT(struct SJSN_VB* obj)
 {
-	struct SJSN_OBJ* temp;
+	struct SJSN_VB* temp;
 	
 	while(obj) {
-		SJSNFree(obj->value);
+		SJSNFree(obj->data.object);
 		free(obj->name);
 		
 		temp=obj;
@@ -726,12 +720,12 @@ void _SJSNfreeOBJECT(struct SJSN_OBJ* obj)
 	}
 }
 
-void _SJSNfreeARRAY(struct SJSN_ARR* arr)
+void _SJSNfreeARRAY(struct SJSN_VA* arr)
 {
-	struct SJSN_ARR* temp;
+	struct SJSN_VA* temp;
 	
 	while(arr) {
-		SJSNFree(arr->value);
+		SJSNFree(arr->data.array);
 		
 		temp=arr;
 		arr=arr->next;
@@ -740,19 +734,23 @@ void _SJSNfreeARRAY(struct SJSN_ARR* arr)
 	}
 }
 
-void SJSNFree(struct SJSN_VAL* val)
+void SJSNFree(void* val)
 {
+	struct SJSN_VA *tval;
+	
 	if(!val) return;
 	
-	switch(val->type) {
+	tval=(struct SJSN_VA*)val;
+	
+	switch(tval->type) {
 		case SJSN_VAL_OBJECT:
-			_SJSNfreeOBJECT(val->res.object);
+			_SJSNfreeOBJECT((struct SJSN_VB*)tval->data.object);
 			break;
 		case SJSN_VAL_ARRAY:
-			_SJSNfreeARRAY(val->res.array);
+			_SJSNfreeARRAY(tval->data.array);
 			break;
 		case SJSN_VAL_STRING:
-			free(val->res.string);
+			free(tval->data.string);
 			break;
 	}
 	
@@ -777,7 +775,7 @@ inline unsigned int _SJSNhashIDX(char* name)
 	return rval;
 }
 
-void SJSNObjectIdx(struct SJSN_OBJ* obj)
+void SJSNObjectIdx(struct SJSN_VB* obj)
 {
 	if(!obj) return;
 	if(!obj->name) return;
@@ -786,13 +784,13 @@ void SJSNObjectIdx(struct SJSN_OBJ* obj)
 	return;
 }
 
-struct SJSN_VAL* SJSNQuery(struct SJSN_VAL* val, char* path, int mode)
+struct SJSN_VA* SJSNQuery(struct SJSN_VA* val, char* path, int mode)
 {
 	char nbf[128];
 	unsigned int i;
-
-	struct SJSN_ARR *aptr;
-	struct SJSN_OBJ *optr, *optr_p;
+	
+	struct SJSN_VA *aptr;
+	struct SJSN_VB *optr, *optr_p;
 	
 	if( !val || !path ) return NULL;
 	
@@ -804,7 +802,7 @@ struct SJSN_VAL* SJSNQuery(struct SJSN_VAL* val, char* path, int mode)
 			
 			// data process
 			if(val->type==SJSN_VAL_OBJECT) {
-				optr=val->res.object;
+				optr=val->data.object;
 				i=_SJSNhashIDX(nbf);
 				
 				optr_p=NULL;
@@ -814,57 +812,56 @@ struct SJSN_VAL* SJSNQuery(struct SJSN_VAL* val, char* path, int mode)
 					optr=optr->next;
 				}
 				
-				if(optr) val=optr->value;
-				else if(mode) {
-					optr_p->next=malloc(sizeof(struct SJSN_OBJ));
-					
-					optr=optr_p->next;
-					optr->name=malloc(strlen(nbf));
-					strcpy(optr->name, nbf);
-					optr->hidx=i;
-					optr->value=malloc(sizeof(struct SJSN_VAL));
-					optr->value->type=SJSN_VAL_NULL;
-					optr->next=NULL;
+				if(!optr) {
+					if(mode) {
+						optr_p->next=malloc(sizeof(struct SJSN_VB));
+						
+						optr=optr_p->next;
+						optr->name=malloc(strlen(nbf));
+						strcpy(optr->name, nbf);
+						optr->hidx=i;
+						
+						optr->type=SJSN_VAL_NULL;
+						optr->next=NULL;
+					}
+					else return NULL;
 				}
-				else return NULL;
 				
-				val=optr->value;
+				val=(struct SJSN_VA*)optr;
 			}
 			else if(val->type==SJSN_VAL_ARRAY) {
-				aptr=val->res.array;
+				aptr=val->data.array;
 				
 				///TODO: if wrong digit format
 				for(i=atoi(nbf); i>0; i--) {
 					if(aptr->next) aptr=aptr->next;
 					else if(mode) {
-						aptr->next=malloc(sizeof(struct SJSN_ARR));
+						aptr->next=malloc(sizeof(struct SJSN_VA));
 						aptr=aptr->next;
 						
-						aptr->value=malloc(sizeof(struct SJSN_VAL));
-						aptr->value->type=SJSN_VAL_NULL;
+						aptr->type=SJSN_VAL_NULL;
 						aptr->next=NULL;
 					}
 					else return NULL;
 				}
 				
-				val=aptr->value;
+				val=aptr;
 			}
 			else if(val->type==SJSN_VAL_NULL && mode) {
 				///TODO: detect type (array/object)?
 				
 				val->type=SJSN_VAL_OBJECT;
-				val->res.object=malloc(sizeof(struct SJSN_OBJ));
+				val->data.object=malloc(sizeof(struct SJSN_VB));
 				
-				optr=val->res.object;
+				optr=val->data.object;
 				
 				optr->name=malloc(strlen(nbf));
 				strcpy(optr->name, nbf);
 				optr->hidx=_SJSNhashIDX(nbf);
-				optr->value=malloc(sizeof(struct SJSN_VAL));
-				optr->value->type=SJSN_VAL_NULL;
+				optr->type=SJSN_VAL_NULL;
 				optr->next=NULL;
 				
-				val=optr->value;
+				val=(struct SJSN_VA*)optr;
 			}
 			else {
 				// invalid type !!
@@ -892,10 +889,10 @@ struct SJSN_VAL* SJSNQuery(struct SJSN_VAL* val, char* path, int mode)
 	return val;
 }
 
-struct SJSN_VAL* SJSNObjMultiQuery(struct SJSN_VAL* val, char* id)
+struct SJSN_VA* SJSNObjMultiQuery(struct SJSN_VA* val, char* id)
 {
-	struct SJSN_OBJ *optr;
-	struct SJSN_VAL *rval;
+	struct SJSN_VB *optr;
+	//struct SJSN_VA *rval;
 	unsigned int i;
 	
 	if(!val) {
@@ -904,13 +901,13 @@ struct SJSN_VAL* SJSNObjMultiQuery(struct SJSN_VAL* val, char* id)
 	}
 	else {
 		if(val->type!=SJSN_VAL_OBJECT) return NULL;
-		else optr=val->res.object;
+		else optr=val->data.object;
 	}
 	
 	i=_SJSNhashIDX(id);
 	
 	while(optr) {
-		if(optr->hidx==i) return optr->value;
+		if(optr->hidx==i) return (struct SJSN_VA*)optr;
 		else optr=optr->next;
 	}
 	

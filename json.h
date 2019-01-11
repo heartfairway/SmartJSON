@@ -1,12 +1,14 @@
 /******
-* JSON Parser & Exporter   (code Stella)
+* JSON Parser & Exporter
 * 
 * by. Cory Chiang
 * 
+*   V. 2.0.0 (2019/1/11)
+*
 
 BSD 3-Clause License
 
-Copyright (c) 2017, Cory Chiang
+Copyright (c) 2019, Cory Chiang
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -64,69 +66,62 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SJSN_EXPORT_TYPE	7
 
 // forward declaration
-struct SJSN_ARR;
-struct SJSN_OBJ;
+struct SJSN_VA;
+struct SJSN_VB;
+
+//struct SJSN_ARR;
+//struct SJSN_OBJ;
 
 /* data definitions */
 
-union SJSNvalue
+// data descriptors
+union SJSNval
 {
 	char*				string;
 	int64_t				integer;
 	double				realnum;
-	struct SJSN_ARR*	array;
-	struct SJSN_OBJ*	object;
+	struct SJSN_VA*		array;
+	struct SJSN_VB*		object;
 };
 
-/*
-* Value descriptor
-*/
-struct SJSN_VAL
+struct SJSN_VA
 {
-	unsigned char	type;
-	union SJSNvalue	res;
+	uint8_t			type;
+	union SJSNval	data;
+	struct SJSN_VA*	next;
 };
 
-/*
-* Array descriptor
-*/
-struct SJSN_ARR
+struct SJSN_VB
 {
-	struct SJSN_VAL*	value;
-	struct SJSN_ARR*	next;
-};
-
-/*
-* Object descriptor
-*/
-struct SJSN_OBJ
-{
-	char*				name;
-	unsigned int		hidx;
-	struct SJSN_VAL*	value;
-	struct SJSN_OBJ*	next;
+	uint8_t			type;
+	union SJSNval	data;
+	struct SJSN_VB*	next;
+	
+	char*			name;
+	uint32_t		hidx;
 };
 
 struct SJSN_SHELL
 {
-	char*				str;
+	char*			str;
 	
-	int					error_code;
-	int					p_ptr;
-	int					p_level;
-	struct SJSN_VAL*	p_stack[SJSN_MAX_LEVEL];
+	int				error_code;
+	int				p_ptr;
+	int				p_level;
+	struct SJSN_VA*	p_stack[SJSN_MAX_LEVEL];
 };
 
 /* functions */
-struct SJSN_VAL* SJNSParse(struct SJSN_SHELL* sh);
-struct SJSN_VAL* SJNSQuickParse(char* src);
+struct SJSN_VA* SJNSParse(struct SJSN_SHELL* sh);
+struct SJSN_VA* SJNSQuickParse(char* src);
 
-int SJSNExport(struct SJSN_VAL* val, char* buf, int size);
-void SJSNFree(struct SJSN_VAL* val);
+int SJSNExport(struct SJSN_VA* val, char* buf, int size);
+void SJSNFree(void* val);
 
-void SJSNObjectIdx(struct SJSN_OBJ* obj);
-struct SJSN_VAL* SJSNQuery(struct SJSN_VAL* val, char* path, int mode);
-struct SJSN_VAL* SJSNObjMultiQuery(struct SJSN_VAL* val, char* id);
+void SJSNObjectIdx(struct SJSN_VB* obj);
+
+struct SJSN_VA* SJSNQuery(struct SJSN_VA* val, char* path, int mode);
+struct SJSN_VA* SJSNObjMultiQuery(struct SJSN_VA* val, char* id);
 
 unsigned int SJSNhidx(char* str);
 
