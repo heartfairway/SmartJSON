@@ -3,12 +3,12 @@
 * 
 * by. Cory Chiang
 * 
-*   V. 2.0.0 (2019/1/11)
+*   V. 2.2.0 (2020/11/19)
 *
 
 BSD 3-Clause License
 
-Copyright (c) 2019, Cory Chiang
+Copyright (c) 2020, Cory Chiang
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -142,7 +142,9 @@ void _SJSNmatchNUMBER(struct SJSN_SHELL* sh)
 	// '.'
 	if(sh->str[sh->p_ptr]=='.') {
 		num[i++]=sh->str[sh->p_ptr++];
+		
 		real=1;
+		exp[0]='\0';
 	}
 
 	// part1
@@ -167,7 +169,11 @@ void _SJSNmatchNUMBER(struct SJSN_SHELL* sh)
 	
 	if(real) {
 		sh->p_stack[sh->p_level]->type=SJSN_VAL_REALNUM;
+#if defined(SJSN_NUM_POWER) && SJSN_NUM_POWER
 		sh->p_stack[sh->p_level]->data.realnum=atof(num)*pow(10, atoi(exp)); // atof() prototype returns double
+#else
+		sh->p_stack[sh->p_level]->data.realnum=atof(num); 
+#endif
 	}
 	else {
 		sh->p_stack[sh->p_level]->type=SJSN_VAL_INTEGER;
@@ -502,7 +508,7 @@ struct SJSN_VA* SJNSParse(struct SJSN_SHELL* sh)
 		if(sh->str[sh->p_ptr]!='\0') {
 			// unexpected suffix
 			sh->error_code=SJSN_UNEXP_SUFFIX;
-			return;
+			return NULL;
 		}
 	}
 
@@ -672,7 +678,7 @@ char* _SJSNexportVAL(struct SJSN_VA* val, char* buf, int size, int* err)
 			}
 			
 			//itoa(val->res.integer, buf, 10);
-			sprintf(buf, "%d", val->data.integer);
+			sprintf(buf, "%ld", val->data.integer);
 			break;
 		case SJSN_VAL_STRING:
 			// add some overhead for escape 
@@ -784,10 +790,13 @@ void SJSNObjectIdx(struct SJSN_VB* obj)
 	return;
 }
 
+#if defined(SJSN_ENABLE_QUERY) && SJSN_ENABLE_QUERY
+
 struct SJSN_VA* SJSNQuery(struct SJSN_VA* val, char* path, int mode)
 {
 	char nbf[128];
 	unsigned int i;
+	uint8_t array_closure;
 	
 	struct SJSN_VA *aptr;
 	struct SJSN_VB *optr, *optr_p;
@@ -795,9 +804,21 @@ struct SJSN_VA* SJSNQuery(struct SJSN_VA* val, char* path, int mode)
 	if( !val || !path ) return NULL;
 	
 	i=0;
+	array_closure=0;
 	
 	while(1) {
-		if(*path=='.' || *path=='\0') {
+		if(*path=='.' || *path=='\0' || *path=='[') {
+			if(array_closure) {
+				array_closure=0;
+
+				if(*path=='\0') break; // finish, and return val
+				else { // skip '.' or ']' and prepare for next
+					i=0;
+					path++;
+					continue;
+				}
+			}
+
 			nbf[i]='\0';
 			
 			// data process
@@ -829,24 +850,6 @@ struct SJSN_VA* SJSNQuery(struct SJSN_VA* val, char* path, int mode)
 				
 				val=(struct SJSN_VA*)optr;
 			}
-			else if(val->type==SJSN_VAL_ARRAY) {
-				aptr=val->data.array;
-				
-				///TODO: if wrong digit format
-				for(i=atoi(nbf); i>0; i--) {
-					if(aptr->next) aptr=aptr->next;
-					else if(mode) {
-						aptr->next=malloc(sizeof(struct SJSN_VA));
-						aptr=aptr->next;
-						
-						aptr->type=SJSN_VAL_NULL;
-						aptr->next=NULL;
-					}
-					else return NULL;
-				}
-				
-				val=aptr;
-			}
 			else if(val->type==SJSN_VAL_NULL && mode) {
 				///TODO: detect type (array/object)?
 				
@@ -863,21 +866,38 @@ struct SJSN_VA* SJSNQuery(struct SJSN_VA* val, char* path, int mode)
 				
 				val=(struct SJSN_VA*)optr;
 			}
-			else {
-				// invalid type !!
-				return NULL;
-			}
+			else return NULL;   // invalid type 
 			
-			if(*path=='\0') break; // exit loop
-			else {
-				// skip '.' and prepare for next
+			if(*path=='\0') break; // finish, and return val
+			else { // skip '.' or ']' and prepare for next
 				i=0;
 				path++;
 				continue;
 			}
 		}
-		
-		if(*path=='\\') {
+		else if(*path==']') {
+			if(val->type==SJSN_VAL_ARRAY) {
+				aptr=val->data.array;
+				
+				///TODO: if wrong digit format
+				for(i=atoi(nbf); i>0; i--) {
+					if(aptr->next) aptr=aptr->next;
+					else if(mode) {
+						aptr->next=malloc(sizeof(struct SJSN_VA));
+						aptr=aptr->next;
+						
+						aptr->type=SJSN_VAL_NULL;
+						aptr->next=NULL;
+					}
+					else return NULL;
+				}
+				
+				val=aptr;
+				array_closure=1;
+			}
+			else return NULL;   // invalid type 
+		}
+		else if(*path=='\\') {
 			path++; // skip one character
 			///TODO: escape, unicode
 		}
@@ -913,6 +933,8 @@ struct SJSN_VA* SJSNObjMultiQuery(struct SJSN_VA* val, char* id)
 	
 	return NULL;
 }
+
+#endif
 
 unsigned int SJSNhidx(char* str)
 {

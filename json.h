@@ -3,12 +3,12 @@
 * 
 * by. Cory Chiang
 * 
-*   V. 2.0.0 (2019/1/11)
+*   V. 2.2.0 (2020/11/19)
 *
 
 BSD 3-Clause License
 
-Copyright (c) 2019, Cory Chiang
+Copyright (c) 2020, Cory Chiang
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define SJSN_ENABLE_QUERY	1
+#define SJSN_NUM_POWER		1
+#define SJSN_NUM_INT		0
+
 #define SJSN_MAX_LEVEL		32
 
 /* data types */
@@ -68,9 +76,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // forward declaration
 struct SJSN_VA;
 struct SJSN_VB;
-
-//struct SJSN_ARR;
-//struct SJSN_OBJ;
 
 /* data definitions */
 
@@ -120,12 +125,17 @@ void SJSNFree(void* val);
 
 void SJSNObjectIdx(struct SJSN_VB* obj);
 
+#if defined(SJSN_ENABLE_QUERY) && SJSN_ENABLE_QUERY
+
 struct SJSN_VA* SJSNQuery(struct SJSN_VA* val, char* path, int mode);
 struct SJSN_VA* SJSNObjMultiQuery(struct SJSN_VA* val, char* id);
 
+#endif
+
 unsigned int SJSNhidx(char* str);
 
-//struct SJSN_VAL* SJSNArrayInsert(struct SJSN_ARR **arrd);
-//struct SJSN_VAL* SJSNObjectInsert(struct SJSN_OBJ **objd, char *name);
+#ifdef __cplusplus
+}
+#endif
 
 #endif
