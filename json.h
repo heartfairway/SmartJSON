@@ -3,12 +3,12 @@
 * 
 * by. Cory Chiang
 * 
-*   V. 2.2.0 (2020/11/19)
+*   V. 2.2.1 (2023/07/10)
 *
 
 BSD 3-Clause License
 
-Copyright (c) 2020, Cory Chiang
+Copyright (c) 2023, Cory Chiang
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
