@@ -8,7 +8,7 @@
 
 BSD 3-Clause License
 
-Copyright (c) 2023, Cory Chiang
+Copyright (c) 2025, Cory Chiang
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __JSON_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,6 +73,24 @@ extern "C" {
 #define SJSN_UNEXP_NUL		5
 #define SJSN_OUT_OF_BUF		6
 #define SJSN_EXPORT_TYPE	7
+
+// prepare for 3.0
+typedef struct _json_t {
+    uint8_t type;
+    union {
+        bool    boolean;
+        char   *string;
+        int64_t integer;
+        double  numeric;
+        json_t *list;
+    };
+    json_t *next;
+} json_t;
+
+typedef struct _json_labeled_t {
+    json_t value;
+    char *label;
+} json_labeled_t;
 
 // forward declaration
 struct SJSN_VA;
