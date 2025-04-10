@@ -38,11 +38,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ******/
 
-#ifndef __JSON_H_
-#define __JSON_H_
+#ifndef __JSON_H__
+#define __JSON_H__
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <errno.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,6 +65,16 @@ extern "C" {
 #define SJSN_VAL_INTEGER	6
 #define SJSN_VAL_STRING		7
 
+// for 3.0
+#define JSON_TYPE_NULL     0
+#define JSON_TYPE_BOOLEAN  1
+#define JSON_TYPE_STRING   2
+#define JSON_TYPE_INTEGER  3
+#define JSON_TYPE_NUMERIC  4
+#define JSON_TYPE_ARRAY    5
+#define JSON_TYPE_OBJECT   6
+// --
+
 /* error codes */
 #define SJSN_OK				0
 #define SJSN_PHRASE_ERROR	1
@@ -74,23 +85,29 @@ extern "C" {
 #define SJSN_OUT_OF_BUF		6
 #define SJSN_EXPORT_TYPE	7
 
-// prepare for 3.0
+// for 3.0
+#define JSON_ERROR_NONE    0
+#define JSON_ERRPR_PHRASE  1  
+// --
+
+// for 3.0
 typedef struct _json_t {
     uint8_t type;
-    union {
-        bool    boolean;
-        char   *string;
-        int64_t integer;
-        double  numeric;
-        json_t *list;
+    union {  // this should be 64 bits / 8 bytes in modern 64-bit systems
+        bool           boolean;
+        char           *string;
+        int64_t        integer;
+        double         numeric;
+        struct _json_t *list;
     };
-    json_t *next;
+    struct _json_t *next;
 } json_t;
 
 typedef struct _json_labeled_t {
     json_t value;
     char *label;
 } json_labeled_t;
+// --
 
 // forward declaration
 struct SJSN_VA;
@@ -139,6 +156,21 @@ struct SJSN_SHELL
 struct SJSN_VA* SJNSParse(struct SJSN_SHELL* sh);
 struct SJSN_VA* SJNSQuickParse(char* src);
 
+// for 3.0
+bool jsonFillNull(json_t *dst);
+bool jsonFillBoolean(json_t *dst, bool value);
+bool jsonFillString(json_t *dst, char *value);
+bool jsonFillInteger(json_t *dst, int64_t value);
+bool jsonFillNumeric(json_t *dst, double value);
+bool jsonAttachArray(json_t *dst, json_t *value);
+bool jsonAttachObject(json_t *dst, json_labeled_t *value);
+
+json_t *jsonParse(char *str);
+
+int64_t jsonGetInteger(json_t *value);
+double jsonGetNumeric(json_t *value);
+// --
+
 int SJSNExport(struct SJSN_VA* val, char* buf, int size);
 void SJSNFree(void* val);
 
@@ -157,4 +189,4 @@ unsigned int SJSNhidx(char* str);
 }
 #endif
 
-#endif
+#endif /* __JSON_H__ */
