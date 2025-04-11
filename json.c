@@ -47,6 +47,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "json.h"
 
 // for 3.0
+#ifndef NAN
+#define NAN    0
+#endif
+
 int json_error = 0;
 // --
 
@@ -61,13 +65,18 @@ unsigned int _SJSNhashIDX(char* name);
 
 struct SJSN_VB* _SJSNObjMultiQuery_last_ptr=NULL;
 
-
+// 3.0
 bool _jsonFillZero(json_t *dst);
 json_t *_getLabeledValue(json_labeled_t *labeled);
 
 char *_skipWhitespace(char **src);
 int _getString(char **src, char *buf);
 json_t *_buildValue(char **src);
+
+int _strcpyToJsonEsc(char *dest, char *src);
+
+void _fillPureValStrBuf(json_t *value, bool esc, char *buf, int *idx);
+void _fillOptStrBuf(json_t *value, char *buf, int *idx);
 
 /* parsing */
 
@@ -507,6 +516,56 @@ json_t *jsonParse(char *str)
     return _buildValue(&str);
 }
 
+bool jsonEqNull(json_t *value)
+{
+    if(!value) return true;
+
+    switch(value->type) {
+        case JSON_TYPE_NULL:
+            return true;
+        case JSON_TYPE_STRING:
+            if(strlen(value->string)==0) return true;
+            else return false;
+        case JSON_TYPE_INTEGER:
+            if(value->integer==0) return true;
+            else return false;
+        case JSON_TYPE_NUMERIC:
+            if(value->numeric==0) return true;
+            else return false;
+        case JSON_TYPE_ARRAY:
+        case JSON_TYPE_OBJECT:
+            if(value->list==NULL) return true;
+            else return false;
+        default: // JSON_TYPE_BOOLEAN
+            return false;
+    }
+}
+
+bool jsonEqBoolean(json_t *value)
+{
+    if(!value) return false;
+
+    switch(value->type) {
+        case JSON_TYPE_BOOLEAN:
+            return value->boolean;
+        case JSON_TYPE_STRING:
+            if(strlen(value->string)) return true;
+            else return false;
+        case JSON_TYPE_INTEGER:
+            if(value->integer) return true;
+            else return false;
+        case JSON_TYPE_NUMERIC:
+            if(value->numeric) return true;
+            else return false;
+        case JSON_TYPE_ARRAY:
+        case JSON_TYPE_OBJECT:
+            if(value->list) return true;
+            else return false;
+        default: // JSON_TYPE_NULL
+            return false;
+    }
+}
+
 int64_t jsonGetInterger(json_t *value)
 {
     if(!value) return 0;
@@ -520,7 +579,7 @@ int64_t jsonGetInterger(json_t *value)
             return value->integer;
         case JSON_TYPE_NUMERIC:
             return (int64_t)value->numeric;
-        default: // including null
+        default: // JSON_TYPE_NULL, JSON_TYPE_ARRAY, JSON_TYPE_OBJECT
             return 0;
     }
 }
@@ -530,6 +589,8 @@ double jsonGetNumeric(json_t *value)
     if(!value) return 0;
 
     switch(value->type) {
+        case JSON_TYPE_NULL:
+            return 0;
         case JSON_TYPE_BOOLEAN:
             if(value->boolean) return 1;
             else return 0;
@@ -539,9 +600,141 @@ double jsonGetNumeric(json_t *value)
             return (double)value->integer;
         case JSON_TYPE_NUMERIC:
             return value->numeric;
-        default: // including null
-            return 0;
+        default: // JSON_TYPE_ARRAY, JSON_TYPE_OBJECT
+            return NAN;
     }
+}
+
+inline int _strcpyToJsonEsc(char *dest, char *src)
+{
+    int i;
+    int pLen = 0;
+
+    for(i=0; src[i]!='\0'; i++) {
+        switch(src[i]) {
+            case '\t':
+                dest[pLen++]='\\';
+                dest[pLen++]='t';
+                break;
+            case '\n':
+                dest[pLen++]='\\';
+                dest[pLen++]='n';
+                break;
+            case '\r':
+                dest[pLen++]='\\';
+                dest[pLen++]='r';
+                break;
+            case '\"':
+                dest[pLen++]='\\';
+                dest[pLen++]='\"';
+                break;
+            case '\\':
+                dest[pLen++]='\\';
+                dest[pLen++]='\\';
+                break;
+            default:
+                dest[pLen++]=src[i];
+        }
+    }
+
+    return pLen;
+}
+
+inline void _fillPureValStrBuf(json_t *value, bool esc, char *buf, int *idx)
+{
+    switch(value->type) {
+        case JSON_TYPE_NULL:
+            *idx+=sprintf(&buf[*idx], "null");
+            break;
+        case JSON_TYPE_BOOLEAN:
+            if(value->boolean) *idx+=sprintf(&buf[*idx], "true");
+            else *idx+=sprintf(&buf[*idx], "false");
+            break;
+        case JSON_TYPE_STRING:
+            if(esc) *idx+=_strcpyToJsonEsc(&buf[*idx], value->string);
+            else {
+                strcpy(&buf[*idx], value->string);
+                *idx+=strlen(value->string);
+            }
+            break;
+        case JSON_TYPE_INTEGER:
+            *idx+=sprintf(&buf[*idx], "%lld", value->integer);
+            break;
+        case JSON_TYPE_NUMERIC:
+            *idx+=sprintf(&buf[*idx], "%f", value->numeric);
+            break;
+        case JSON_TYPE_ARRAY:
+            *idx+=sprintf(&buf[*idx], "(array)");
+            break;
+        case JSON_TYPE_OBJECT:
+            *idx+=sprintf(&buf[*idx], "(object)");
+            break;
+        default:
+            *idx+=sprintf(&buf[*idx], "(type error)");
+    }
+}
+
+void _fillOptStrBuf(json_t *value, char *buf, int *idx)
+{
+    int i;
+    json_t *arrayPtr;
+    json_labeled_t *objectPtr;
+
+    switch(value->type) {
+        case JSON_TYPE_STRING:
+            buf[*idx++]='\"';
+            _fillPureValStrBuf(value, true, buf, idx);
+            buf[*idx++]='\"';
+            break;
+        case JSON_TYPE_ARRAY:
+            buf[*idx++]='[';
+            arrayPtr=value->list;
+            while(arrayPtr) {
+                buf[*idx++]=' '; // for pretty   XD
+                _fillOptStrBuf(arrayPtr, buf, idx);
+                buf[*idx++]=',';
+                arrayPtr=arrayPtr->next;
+            }
+            if(value->list) *idx--; // not empty array, over-write the last comma
+            buf[*idx++]=' '; // for pretty
+            buf[*idx++]=']';
+            break;
+        case JSON_TYPE_OBJECT:
+            buf[*idx++]='{';
+            objectPtr=(json_labeled_t *)value->list;
+            while(objectPtr) {
+                buf[*idx++]=' '; // for pretty
+                buf[*idx++]='\"';
+                *idx+=sprintf(&buf[*idx], "%s", objectPtr->label);
+                buf[*idx++]='\"';
+                buf[*idx++]=':';
+                buf[*idx++]=' '; // for pretty
+                _fillOptStrBuf(&objectPtr->value, buf, idx);
+                buf[*idx++]=',';
+                objectPtr=(json_labeled_t *)objectPtr->value.next;
+            }
+            if(value->list) *idx--; // not empty object, over-write the last comma
+            buf[*idx++]=' '; // for pretty
+            buf[*idx++]='}';
+            break;
+        default:
+            _fillPureValStrBuf(value, true, buf, idx);
+    }
+}
+
+char *jsonGetString(json_t *value)
+{
+    char buf[4096];
+    char *rval;
+    int len = 0;
+
+    if(!value) return NULL;
+    
+    _fillOptStrBuf(value, buf, &len);
+
+    rval=malloc(len+1);
+
+    return rval;
 }
 
 // -- (3.0)

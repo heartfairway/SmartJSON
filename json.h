@@ -167,8 +167,11 @@ bool jsonAttachObject(json_t *dst, json_labeled_t *value);
 
 json_t *jsonParse(char *str);
 
+bool jsonEqNull(json_t *value);
+bool jsonEqBoolean(json_t *value);
 int64_t jsonGetInteger(json_t *value);
 double jsonGetNumeric(json_t *value);
+char *jsonGetString(json_t *value);
 // --
 
 int SJSNExport(struct SJSN_VA* val, char* buf, int size);
