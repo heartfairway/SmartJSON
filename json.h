@@ -166,6 +166,7 @@ bool jsonAttachArray(json_t *dst, json_t *value);
 bool jsonAttachObject(json_t *dst, json_labeled_t *value);
 
 json_t *jsonParse(char *str);
+json_t *jsonQuery(json_t *root, char *str);
 
 bool jsonEqNull(json_t *value);
 bool jsonEqBoolean(json_t *value);

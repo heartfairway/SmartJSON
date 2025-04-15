@@ -6,7 +6,7 @@ int main(void)
 {
 	//struct SJSN_SHELL shell;
 	//struct SJSN_VA *js;
-	json_t *js;
+	json_t *js, *js2;
 	char buf_a[128]; //, buf_b[128];
 	char *output;
 
@@ -33,6 +33,10 @@ int main(void)
 	output=jsonGetString(js);
 
 	//printf("Buffer B:\n  %s \n", buf_b);
+	printf("Output:\n  %s \n", output);
+
+	js2=jsonQuery(js, "array[2]");
+	output=jsonGetString(js2);
 	printf("Output:\n  %s \n", output);
 
 	return 0;

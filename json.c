@@ -75,6 +75,9 @@ json_t *_buildValue(char **src);
 
 int _strcpyToJsonEsc(char *dest, char *src);
 
+json_t *_queryArray(json_t *value, char **src);
+json_t *_queryObject(json_t *value, char **src);
+
 void _fillPureValStrBuf(json_t *value, bool esc, char *buf, int *idx);
 void _fillOptStrBuf(json_t *value, char *buf, int *idx);
 
@@ -523,6 +526,83 @@ json_t *jsonParse(char *str)
 {
     _skipWhitespace(&str);
     return _buildValue(&str);
+}
+
+inline json_t *_queryArray(json_t *value, char **src)
+{
+    json_t *accessPtr;
+    char buf[32];
+    int i, n;
+
+    if(**src!='[') return NULL;  // syntax error
+    else (*src)++;
+
+    i=0;
+    while(isdigit(**src)) {
+        buf[i++]=**src;
+        (*src)++;
+    }
+
+    if(**src!=']') return NULL;  // syntax error
+    (*src)++;
+    buf[i]='\0';
+
+    n=atoi(buf);
+    accessPtr=value->list;
+
+    for(i=0; i<n; i++) {
+        accessPtr=accessPtr->next;
+        if(accessPtr==NULL) break;
+    }
+
+    return accessPtr;
+}
+
+inline json_t *_queryObject(json_t *value, char **src)
+{
+    json_labeled_t *accessPtr;
+    char buf[256];
+    int i;
+
+    i=0;
+    while(isalnum(**src)) {
+        buf[i++]=**src;
+        (*src)++;
+    }
+    if(**src!='.' && **src!='[' && **src!='\0') return NULL; // syntax error
+    buf[i]='\0';
+
+    accessPtr=(json_labeled_t *)value->list;
+
+    while(accessPtr) {
+        accessPtr=(json_labeled_t *)accessPtr->value.next;
+        if(strcmp(buf, accessPtr->label)==0) break;
+    }
+
+    if(accessPtr) return &accessPtr->value;
+    else return NULL;
+}
+
+json_t *jsonQuery(json_t *root, char *str)
+{
+    json_t *currentLevel, *accessPtr;
+
+    if(!root) return NULL;
+
+    if(!str) return root;
+    if(strlen(str)==0) return root;
+
+    currentLevel=root;
+    while(*str!='\0') {
+        if(currentLevel->type==JSON_TYPE_ARRAY) accessPtr=_queryArray(currentLevel, &str);
+        else if(currentLevel->type==JSON_TYPE_OBJECT) accessPtr=_queryObject(currentLevel, &str);
+        else return NULL;
+
+        if(!accessPtr) break; 
+        currentLevel=accessPtr;
+    }
+
+    return accessPtr;
 }
 
 bool jsonEqNull(json_t *value)
