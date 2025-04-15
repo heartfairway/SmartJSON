@@ -1,41 +1,36 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "json.h"
 
 int main(void)
 {
-	//struct SJSN_SHELL shell;
-	//struct SJSN_VA *js;
-	json_t *js, *js2;
-	char buf_a[128]; //, buf_b[128];
+	json_t *js1, *js2;
+	char input[512];
 	char *output;
 
-	//strcpy(buf_a, "Null"); // null
-	//strcpy(buf_a, "false"); // false
-	//strcpy(buf_a, "true"); // true
-	//strcpy(buf_a, "{\"boolean\":true, \"integer\":123}"); // simple object
-	//strcpy(buf_a, "[True, False]"); // simple array
-	//strcpy(buf_a, "[1, 2.3, true, false, \"String\", null]"); // array
-	//strcpy(buf_a, "-1.23"); // real number
-	//strcpy(buf_a, "123000"); // int number
-	//strcpy(buf_a, "\"This is a string.\""); //string
-	strcpy(buf_a, "{\"string\":\"A String\", \"number\":123, \"array\":[123, \"string\", true, false, null]}"); // mixed object
+	//strcpy(input, "Null"); // null
+	//strcpy(input, "false"); // false
+	//strcpy(input, "true"); // true
+	//strcpy(input, "{\"boolean\":true, \"integer\":123}"); // simple object
+	//strcpy(input, "[True, False]"); // simple array
+	//strcpy(input, "[1, 2.3, true, false, \"String\", null]"); // array
+	//strcpy(input, "-1.23"); // real number
+	//strcpy(input, "123000"); // int number
+	//strcpy(input, "\"This is a string.\""); //string
+	//strcpy(input, "{\"string\":\"A String\", \"number\":123, \"array\":[123, \"string\", true, false, null]}"); // mixed object
+	strcpy(input, "{\"nameA\":{\"AA\":[\"s1\", \"s2\", \"s3\" ], \"AB\":[\"s4\", \"s5\", \"s6\" ], \"AC\":[\"s7\", \"s8\", \"s9\"]}, \"nameB\":{\"BA\":[\"s10\", \"s11\", \"s12\"], \"BB\":[\"s13\",\"s14\",\"s15\"],\"BC\":[\"s16\", \"s17\", \"s18\" ]}, \"nameC\":{\"CA\":[\"s19\", \"s20\", \"s21\" ], \"CB\":[\"s22\", \"s23\", \"s24\" ], \"CC\":[\"s25\", \"s26\", \"s27\" ]}, \"NameC2\":[ 0, 1, 2, 3 ], \"nameD\":[ 10, 20, 30 ] }"); // mixed object
 	
-	printf("Buffer A:\n  %s \n", buf_a);
+	printf("Input:\n  %s \n", input);
 
-	//shell.str=buf_a;
-	//js=SJNSParse(&shell);
-	js=jsonParse(buf_a);
+	js1=jsonParse(input);
 
-	//printf("Parsing status: %d / %d / %d \n", shell.error_code, shell.p_ptr, shell.p_level);
-
-	//SJSNExport(js, buf_b, 128);
-	output=jsonGetString(js);
-
-	//printf("Buffer B:\n  %s \n", buf_b);
+	output=jsonGetString(js1);
 	printf("Output:\n  %s \n", output);
 
-	js2=jsonQuery(js, "array[2]");
+	free(output);
+
+	js2=jsonQuery(js1, "nameB.BA[2]");
 	output=jsonGetString(js2);
 	printf("Output:\n  %s \n", output);
 

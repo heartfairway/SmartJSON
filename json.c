@@ -570,15 +570,16 @@ inline json_t *_queryObject(json_t *value, char **src)
         (*src)++;
     }
     if(**src!='.' && **src!='[' && **src!='\0') return NULL; // syntax error
+    if(**src=='.') (*src)++;
     buf[i]='\0';
 
     accessPtr=(json_labeled_t *)value->list;
 
     while(accessPtr) {
-        accessPtr=(json_labeled_t *)accessPtr->value.next;
         if(strcmp(buf, accessPtr->label)==0) break;
+        accessPtr=(json_labeled_t *)accessPtr->value.next;
     }
-
+    
     if(accessPtr) return &accessPtr->value;
     else return NULL;
 }
