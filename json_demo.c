@@ -4,9 +4,11 @@
 
 int main(void)
 {
-	struct SJSN_SHELL shell;
-	struct SJSN_VA *js;
-	char buf_a[128], buf_b[128];
+	//struct SJSN_SHELL shell;
+	//struct SJSN_VA *js;
+	json_t *js;
+	char buf_a[128]; //, buf_b[128];
+	char *output;
 
 	//strcpy(buf_a, "Null"); // null
 	//strcpy(buf_a, "false"); // false
@@ -21,14 +23,17 @@ int main(void)
 	
 	printf("Buffer A:\n  %s \n", buf_a);
 
-	shell.str=buf_a;
-	js=SJNSParse(&shell);
+	//shell.str=buf_a;
+	//js=SJNSParse(&shell);
+	js=jsonParse(buf_a);
 
-	printf("Parsing status: %d / %d / %d \n", shell.error_code, shell.p_ptr, shell.p_level);
+	//printf("Parsing status: %d / %d / %d \n", shell.error_code, shell.p_ptr, shell.p_level);
 
-	SJSNExport(js, buf_b, 128);
+	//SJSNExport(js, buf_b, 128);
+	output=jsonGetString(js);
 
-	printf("Buffer B:\n  %s \n", buf_b);
+	//printf("Buffer B:\n  %s \n", buf_b);
+	printf("Output:\n  %s \n", output);
 
 	return 0;
 }

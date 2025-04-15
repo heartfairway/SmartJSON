@@ -183,7 +183,7 @@ bool jsonAttachObject(json_t *dst, json_labeled_t *value)
 inline char *_skipWhitespace(char **src)
 {
     while(**src==' ' || **src=='\n' || **src=='\r' || **src=='\t') {
-        *src++;
+        (*src)++;
     }
 
     return *src;
@@ -193,13 +193,13 @@ json_t *_matchNull(char **src)
 {
     json_t *rval;
 
-    if(*src[0]!='n' && *src[0]!='N') return NULL;
-    if(*src[1]!='u' && *src[1]!='U') return NULL;
-    if(*src[2]!='l' && *src[2]!='L') return NULL;
-    if(*src[3]!='l' && *src[3]!='L') return NULL;
-    if(isalnum(*src[4])) return NULL;
+    if((*src)[0]!='n' && (*src)[0]!='N') return NULL;
+    if((*src)[1]!='u' && (*src)[1]!='U') return NULL;
+    if((*src)[2]!='l' && (*src)[2]!='L') return NULL;
+    if((*src)[3]!='l' && (*src)[3]!='L') return NULL;
+    if(isalnum((*src)[4])) return NULL;
 
-    *src+=4;
+    (*src)+=4;
     rval=malloc(sizeof(json_t));
     jsonFillNull(rval);
 
@@ -210,13 +210,13 @@ json_t *_matchBooleanTrue(char **src)
 {
     json_t *rval;
 
-    if(*src[0]!='t' && *src[0]!='T') return NULL;
-    if(*src[1]!='r' && *src[1]!='R') return NULL;
-    if(*src[2]!='u' && *src[2]!='U') return NULL;
-    if(*src[3]!='e' && *src[3]!='E') return NULL;
-    if(isalnum(*src[4])) return NULL;
+    if((*src)[0]!='t' && (*src)[0]!='T') return NULL;
+    if((*src)[1]!='r' && (*src)[1]!='R') return NULL;
+    if((*src)[2]!='u' && (*src)[2]!='U') return NULL;
+    if((*src)[3]!='e' && (*src)[3]!='E') return NULL;
+    if(isalnum((*src)[4])) return NULL;
 
-    *src+=4;
+    (*src)+=4;
     rval=malloc(sizeof(json_t));
     jsonFillBoolean(rval, true);
 
@@ -227,14 +227,14 @@ json_t *_matchBooleanFalse(char **src)
 {
     json_t *rval;
 
-    if(*src[0]!='f' && *src[0]!='F') return NULL;
-    if(*src[1]!='a' && *src[1]!='A') return NULL;
-    if(*src[2]!='l' && *src[2]!='L') return NULL;
-    if(*src[3]!='s' && *src[3]!='S') return NULL;
-    if(*src[4]!='e' && *src[4]!='E') return NULL;
-    if(isalnum(*src[5])) return NULL;
+    if((*src)[0]!='f' && (*src)[0]!='F') return NULL;
+    if((*src)[1]!='a' && (*src)[1]!='A') return NULL;
+    if((*src)[2]!='l' && (*src)[2]!='L') return NULL;
+    if((*src)[3]!='s' && (*src)[3]!='S') return NULL;
+    if((*src)[4]!='e' && (*src)[4]!='E') return NULL;
+    if(isalnum((*src)[5])) return NULL;
 
-    *src+=5;
+    (*src)+=5;
     rval=malloc(sizeof(json_t));
     jsonFillBoolean(rval, false);
 
@@ -246,12 +246,12 @@ inline int _getString(char **src, char *buf)
     int pLen = 0;
 
     if(**src!='\"') return 0;
-    *src++;
-    
+    (*src)++;
+
     // scan to the end double quote or string end   
     while(**src!='\"' && **src!='\0') {
         if(**src=='\\') { // escape character
-            *src++; // (the escape character)
+            (*src)++; // (the escape character)
             switch(**src) { // look ahead                    
                 case '\"':
                     buf[pLen++]='\"';
@@ -283,19 +283,19 @@ inline int _getString(char **src, char *buf)
                     return 0;
             }
 
-            *src++; // (the one after escape character)
+            (*src)++; // (the one after escape character)
         }
         else {
             buf[pLen++]=**src;
-            *src++;
+            (*src)++;
         }
     }
     
     // syntax error, should end with a double quote
     if(**src=='\0') return 0; 
+    else (*src)++; // shift the '\"'
 
-    *src++;
-    buf[pLen+1]='\0';
+    buf[pLen]='\0';
 
     return pLen;
 }
@@ -304,7 +304,7 @@ json_t *_matchString(char **src)
 {
     json_t *rval;
     char buf[2048];
-    
+
     if(!_getString(src, buf)) {
         // syntax error
         return NULL;
@@ -328,39 +328,39 @@ json_t *_matchNumber(char **src)
 
     if(**src=='-') {
         buf[i++]='-';
-        *src++;
+        (*src)++;
     }
 
     while(isdigit(**src)) {
         buf[i++]=**src;
-        *src++;
+        (*src)++;
     }
 
     if(**src=='.') {
         buf[i++]='.';
         numeric=true;
-        *src++;
+        (*src)++;
     }
 
     while(isdigit(**src)) {
         buf[i++]=**src;
-        *src++;
+        (*src)++;
     }
 
     if(**src=='e' || **src=='E') {
         buf[i++]='e';
         numeric=true;
-        *src++;
+        (*src)++;
     }
 
     if(**src=='-' || **src=='+') {
         buf[i++]=**src;
-        *src++;
+        (*src)++;
     }
 
     while(isdigit(**src)) {
         buf[i++]=**src;
-        *src++;
+        (*src)++;
     }
 
     buf[i]='\0';
@@ -378,10 +378,10 @@ json_t *_matchArray(char **src)
     json_t *arrayHead, *arrayTail, *matchedItem;
 
     if(**src!='[') return NULL;
-    *src++;
+    (*src)++;
 
     arrayHead=NULL;
-    do {
+    while(1) {
         _skipWhitespace(src);
 
         matchedItem=_buildValue(src);
@@ -398,14 +398,17 @@ json_t *_matchArray(char **src)
         else break; // syntax error
 
         _skipWhitespace(src);
-    } while(**src==',');
+
+        if(**src==',') (*src)++;
+        else break;
+    }
 
     if(**src!=']') {
         // syntax error
         return NULL;
     }
-    
-    *src++;
+    else (*src)++;
+
     rval=malloc(sizeof(json_t));
     jsonAttachArray(rval, arrayHead);
 
@@ -420,9 +423,10 @@ json_t *_matchObject(char **src)
     int len;
 
     if(**src!='{') return NULL;
-    *src++;
+    (*src)++;
 
-    do {
+    objectHead=NULL;
+    while(1) {
         _skipWhitespace(src);
 
         if(!_getString(src, buf)) {
@@ -436,6 +440,7 @@ json_t *_matchObject(char **src)
             // syntax error
             return NULL;
         }
+        else (*src)++; // shift the ':'
 
         _skipWhitespace(src);
 
@@ -458,14 +463,17 @@ json_t *_matchObject(char **src)
         else break; // syntax error
 
         _skipWhitespace(src);
-    } while(**src==',');
+
+        if(**src==',') (*src)++;
+        else break;
+    }
 
     if(**src!='}') {
         // syntax error
         return NULL;
     }
+    else (*src)++;
 
-    *src++;
     rval=malloc(sizeof(json_t));
     jsonAttachObject(rval, objectHead);
 
@@ -513,6 +521,7 @@ inline json_t *_buildValue(char **src)
 
 json_t *jsonParse(char *str)
 {
+    _skipWhitespace(&str);
     return _buildValue(&str);
 }
 
@@ -644,34 +653,29 @@ inline void _fillPureValStrBuf(json_t *value, bool esc, char *buf, int *idx)
 {
     switch(value->type) {
         case JSON_TYPE_NULL:
-            *idx+=sprintf(&buf[*idx], "null");
+            (*idx)+=sprintf(&buf[*idx], "null");
             break;
         case JSON_TYPE_BOOLEAN:
-            if(value->boolean) *idx+=sprintf(&buf[*idx], "true");
-            else *idx+=sprintf(&buf[*idx], "false");
+            if(value->boolean) (*idx)+=sprintf(&buf[*idx], "true");
+            else (*idx)+=sprintf(&buf[*idx], "false");
             break;
         case JSON_TYPE_STRING:
-            if(esc) *idx+=_strcpyToJsonEsc(&buf[*idx], value->string);
+            if(esc) (*idx)+=_strcpyToJsonEsc(&buf[*idx], value->string);
             else {
                 strcpy(&buf[*idx], value->string);
-                *idx+=strlen(value->string);
+                (*idx)+=strlen(value->string);
             }
             break;
         case JSON_TYPE_INTEGER:
-            *idx+=sprintf(&buf[*idx], "%lld", value->integer);
+            (*idx)+=sprintf(&buf[*idx], "%lld", value->integer);
             break;
         case JSON_TYPE_NUMERIC:
-            *idx+=sprintf(&buf[*idx], "%f", value->numeric);
-            break;
-        case JSON_TYPE_ARRAY:
-            *idx+=sprintf(&buf[*idx], "(array)");
-            break;
-        case JSON_TYPE_OBJECT:
-            *idx+=sprintf(&buf[*idx], "(object)");
+            (*idx)+=sprintf(&buf[*idx], "%f", value->numeric);
             break;
         default:
-            *idx+=sprintf(&buf[*idx], "(type error)");
+            (*idx)+=sprintf(&buf[*idx], "(type error)");
     }
+    buf[*idx]='\0';
 }
 
 void _fillOptStrBuf(json_t *value, char *buf, int *idx)
@@ -682,44 +686,45 @@ void _fillOptStrBuf(json_t *value, char *buf, int *idx)
 
     switch(value->type) {
         case JSON_TYPE_STRING:
-            buf[*idx++]='\"';
+            buf[(*idx)++]='\"';
             _fillPureValStrBuf(value, true, buf, idx);
-            buf[*idx++]='\"';
+            buf[(*idx)++]='\"';
             break;
         case JSON_TYPE_ARRAY:
-            buf[*idx++]='[';
+            buf[(*idx)++]='[';
             arrayPtr=value->list;
             while(arrayPtr) {
-                buf[*idx++]=' '; // for pretty   XD
+                buf[(*idx)++]=' '; // for pretty   XD
                 _fillOptStrBuf(arrayPtr, buf, idx);
-                buf[*idx++]=',';
+                buf[(*idx)++]=',';
                 arrayPtr=arrayPtr->next;
             }
-            if(value->list) *idx--; // not empty array, over-write the last comma
-            buf[*idx++]=' '; // for pretty
-            buf[*idx++]=']';
+            if(value->list) (*idx)--; // not empty array, over-write the last comma
+            buf[(*idx)++]=' '; // for pretty
+            buf[(*idx)++]=']';
             break;
         case JSON_TYPE_OBJECT:
-            buf[*idx++]='{';
+            buf[(*idx)++]='{';
             objectPtr=(json_labeled_t *)value->list;
             while(objectPtr) {
-                buf[*idx++]=' '; // for pretty
-                buf[*idx++]='\"';
-                *idx+=sprintf(&buf[*idx], "%s", objectPtr->label);
-                buf[*idx++]='\"';
-                buf[*idx++]=':';
-                buf[*idx++]=' '; // for pretty
+                buf[(*idx)++]=' '; // for pretty
+                buf[(*idx)++]='\"';
+                (*idx)+=sprintf(&buf[*idx], "%s", objectPtr->label);
+                buf[(*idx)++]='\"';
+                buf[(*idx)++]=':';
+                buf[(*idx)++]=' '; // for pretty
                 _fillOptStrBuf(&objectPtr->value, buf, idx);
-                buf[*idx++]=',';
+                buf[(*idx)++]=',';
                 objectPtr=(json_labeled_t *)objectPtr->value.next;
             }
-            if(value->list) *idx--; // not empty object, over-write the last comma
-            buf[*idx++]=' '; // for pretty
-            buf[*idx++]='}';
+            if(value->list) (*idx)--; // not empty object, over-write the last comma
+            buf[(*idx)++]=' '; // for pretty
+            buf[(*idx)++]='}';
             break;
         default:
             _fillPureValStrBuf(value, true, buf, idx);
     }
+    buf[*idx]='\0';
 }
 
 char *jsonGetString(json_t *value)
@@ -729,10 +734,14 @@ char *jsonGetString(json_t *value)
     int len = 0;
 
     if(!value) return NULL;
-    
-    _fillOptStrBuf(value, buf, &len);
+
+    if(value->type==JSON_TYPE_ARRAY || value->type==JSON_TYPE_OBJECT) {
+        _fillOptStrBuf(value, buf, &len);
+    }
+    else _fillPureValStrBuf(value, false, buf, &len);
 
     rval=malloc(len+1);
+    strcpy(rval, buf);
 
     return rval;
 }
