@@ -4,6 +4,7 @@
 
 int main(void)
 {
+#if 0
 	struct SJSN_SHELL shell;
 	struct SJSN_VA *js, *query;
 	char buf_a[512], buf_b[512];
@@ -39,6 +40,6 @@ int main(void)
 
 	SJSNExport(js, buf_b, 512);
 	printf("(auto create result) Buffer B:\n  %s \n", buf_b);
-
+#endif
 	return 0;
 }
