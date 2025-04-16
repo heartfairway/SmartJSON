@@ -101,21 +101,23 @@ typedef struct _json_t {
         struct _json_t *list;
     };
     struct _json_t *next;
+	char *label;
 } json_t;
 
-typedef struct _json_labeled_t {
+/*typedef struct _json_labeled_t {
     json_t value;
     char *label;
-} json_labeled_t;
+} json_labeled_t;*/
 // --
 
 // forward declaration
-struct SJSN_VA;
+/*struct SJSN_VA;
 struct SJSN_VB;
-
+*/
 /* data definitions */
 
 // data descriptors
+/*
 union SJSNval
 {
 	char*				string;
@@ -151,11 +153,12 @@ struct SJSN_SHELL
 	int				p_level;
 	struct SJSN_VA*	p_stack[SJSN_MAX_LEVEL];
 };
-
+*/
 /* functions */
+/*
 struct SJSN_VA* SJNSParse(struct SJSN_SHELL* sh);
 struct SJSN_VA* SJNSQuickParse(char* src);
-
+*/
 // for 3.0
 bool jsonFillNull(json_t *dst);
 bool jsonFillBoolean(json_t *dst, bool value);
@@ -163,7 +166,7 @@ bool jsonFillString(json_t *dst, char *value);
 bool jsonFillInteger(json_t *dst, int64_t value);
 bool jsonFillNumeric(json_t *dst, double value);
 bool jsonAttachArray(json_t *dst, json_t *value);
-bool jsonAttachObject(json_t *dst, json_labeled_t *value);
+bool jsonAttachObject(json_t *dst, json_t *value);
 
 json_t *jsonParse(char *str);
 json_t *jsonQuery(json_t *root, char *str);
@@ -173,8 +176,10 @@ bool jsonEqBoolean(json_t *value);
 int64_t jsonGetInteger(json_t *value);
 double jsonGetNumeric(json_t *value);
 char *jsonGetString(json_t *value);
-// --
 
+void jsonFree(json_t *value);
+// --
+/*
 int SJSNExport(struct SJSN_VA* val, char* buf, int size);
 void SJSNFree(void* val);
 
@@ -188,7 +193,7 @@ struct SJSN_VA* SJSNObjMultiQuery(struct SJSN_VA* val, char* id);
 #endif
 
 unsigned int SJSNhidx(char* str);
-
+*/
 #ifdef __cplusplus
 }
 #endif

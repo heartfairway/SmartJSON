@@ -34,5 +34,7 @@ int main(void)
 	output=jsonGetString(js2);
 	printf("Output:\n  %s \n", output);
 
+	jsonFree(js1);
+
 	return 0;
 }

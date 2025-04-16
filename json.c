@@ -57,6 +57,7 @@ int json_error = 0;
 ///TODO: When parsing, detect empty array or object, that will cause phrase error.
 
 /* forward reference declaration */
+/*
 void _SJSNbuildVAL(struct SJSN_SHELL* sh);
 char* _SJSNexportVAL(struct SJSN_VA* val, char* buf, int size, int* err);
 
@@ -64,10 +65,9 @@ void _SJSNskipBLANK(struct SJSN_SHELL* sh);
 unsigned int _SJSNhashIDX(char* name);
 
 struct SJSN_VB* _SJSNObjMultiQuery_last_ptr=NULL;
-
+*/
 // 3.0
 bool _jsonFillZero(json_t *dst);
-json_t *_getLabeledValue(json_labeled_t *labeled);
 
 char *_skipWhitespace(char **src);
 int _getString(char **src, char *buf);
@@ -94,11 +94,6 @@ inline bool _jsonFillZero(json_t *dst)
 
     memset(dst, 0, sizeof(json_t));
     return true;
-}
-
-inline json_t *_getLabeledValue(json_labeled_t *labeled)
-{
-    return &labeled->value;
 }
 
 /*************************
@@ -166,12 +161,12 @@ bool jsonAttachArray(json_t *dst, json_t *value)
     return true;
 }
 
-bool jsonAttachObject(json_t *dst, json_labeled_t *value)
+bool jsonAttachObject(json_t *dst, json_t *value)
 {
     if(!value || !_jsonFillZero(dst)) return false;
 
     dst->type=JSON_TYPE_OBJECT;
-    dst->list=(json_t *)value;
+    dst->list=value;
 
     return true;
 }
@@ -421,7 +416,7 @@ json_t *_matchArray(char **src)
 json_t *_matchObject(char **src)
 {
     json_t *rval;
-    json_labeled_t *objectHead, *objectTail, *matchedItem;
+    json_t *objectHead, *objectTail, *matchedItem;
     char buf[2048];
     int len;
 
@@ -447,19 +442,19 @@ json_t *_matchObject(char **src)
 
         _skipWhitespace(src);
 
-        matchedItem=(json_labeled_t *)_buildValue(src);
+        matchedItem=_buildValue(src);
         if(matchedItem) {
             len=strlen(buf);
             matchedItem->label=malloc(len+1);
             strcpy(matchedItem->label, buf);
-            matchedItem->label[len+1]='\0';
+            matchedItem->label[len]='\0';
 
             if(objectHead==NULL) {
                 objectHead=matchedItem;
                 objectTail=objectHead;
             }
             else {
-                objectTail->value.next=(json_t *)matchedItem;
+                objectTail->next=matchedItem;
                 objectTail=matchedItem;
             }
         }
@@ -560,7 +555,7 @@ inline json_t *_queryArray(json_t *value, char **src)
 
 inline json_t *_queryObject(json_t *value, char **src)
 {
-    json_labeled_t *accessPtr;
+    json_t *accessPtr;
     char buf[256];
     int i;
 
@@ -573,14 +568,14 @@ inline json_t *_queryObject(json_t *value, char **src)
     if(**src=='.') (*src)++;
     buf[i]='\0';
 
-    accessPtr=(json_labeled_t *)value->list;
+    accessPtr=value->list;
 
     while(accessPtr) {
         if(strcmp(buf, accessPtr->label)==0) break;
-        accessPtr=(json_labeled_t *)accessPtr->value.next;
+        accessPtr=accessPtr->next;
     }
     
-    if(accessPtr) return &accessPtr->value;
+    if(accessPtr) return accessPtr;
     else return NULL;
 }
 
@@ -762,8 +757,7 @@ inline void _fillPureValStrBuf(json_t *value, bool esc, char *buf, int *idx)
 void _fillOptStrBuf(json_t *value, char *buf, int *idx)
 {
     int i;
-    json_t *arrayPtr;
-    json_labeled_t *objectPtr;
+    json_t *arrayPtr, *objectPtr;
 
     switch(value->type) {
         case JSON_TYPE_STRING:
@@ -786,7 +780,7 @@ void _fillOptStrBuf(json_t *value, char *buf, int *idx)
             break;
         case JSON_TYPE_OBJECT:
             buf[(*idx)++]='{';
-            objectPtr=(json_labeled_t *)value->list;
+            objectPtr=value->list;
             while(objectPtr) {
                 buf[(*idx)++]=' '; // for pretty
                 buf[(*idx)++]='\"';
@@ -794,9 +788,9 @@ void _fillOptStrBuf(json_t *value, char *buf, int *idx)
                 buf[(*idx)++]='\"';
                 buf[(*idx)++]=':';
                 buf[(*idx)++]=' '; // for pretty
-                _fillOptStrBuf(&objectPtr->value, buf, idx);
+                _fillOptStrBuf(objectPtr, buf, idx);
                 buf[(*idx)++]=',';
-                objectPtr=(json_labeled_t *)objectPtr->value.next;
+                objectPtr=objectPtr->next;
             }
             if(value->list) (*idx)--; // not empty object, over-write the last comma
             buf[(*idx)++]=' '; // for pretty
@@ -827,8 +821,23 @@ char *jsonGetString(json_t *value)
     return rval;
 }
 
-// -- (3.0)
+void jsonFree(json_t *value)
+{
+    if(!value) return;
 
+    if(value->type==JSON_TYPE_STRING) free(value->string);
+    else if(value->type==JSON_TYPE_ARRAY|| value->type==JSON_TYPE_OBJECT) {
+        jsonFree(value->list);
+    }
+
+    if(value->next) jsonFree(value->next);
+    if(value->label) free(value->label);
+
+    free(value);
+}
+
+// -- (3.0)
+/*
 inline void _SJSNskipBLANK(struct SJSN_SHELL* sh)
 {
     while(!isgraph(sh->str[sh->p_ptr]) && sh->str[sh->p_ptr]!='\0') sh->p_ptr++;
@@ -1259,11 +1268,11 @@ struct SJSN_VA* SJNSParse(struct SJSN_SHELL* sh)
 {
     struct SJSN_VA* rval;
     
-    /* error hand */
+    // error hand 
     if(!sh) return NULL;
     if(!sh->str) return NULL;
 
-    /* initial */
+    // initial 
     rval=malloc(sizeof(struct SJSN_VA));
     
     sh->error_code=SJSN_OK; // mark for continuous parsing
@@ -1295,7 +1304,7 @@ struct SJSN_VA* SJNSQuickParse(char* src)
     return SJNSParse(&shell);
 }
 
-/* exporting */
+// exporting 
 
 ///TODO: escape & unicode
 char* _SJSNcapSTRING(char* dst, char* src)
@@ -1480,7 +1489,7 @@ int SJSNExport(struct SJSN_VA* val, char* buf, int size)
     return err;
 }
 
-/* free, memory recycle */
+// free, memory recycle 
 
 void _SJSNfreeOBJECT(struct SJSN_VB* obj)
 {
@@ -1714,7 +1723,7 @@ unsigned int SJSNhidx(char* str)
 {
     return _SJSNhashIDX(str);
 }
-
+*/
 /*struct SJSN_VAL* SJSNArrayInsert(struct SJSN_ARR **arrd)
 {
     if(!*arrd) {
