@@ -809,6 +809,22 @@ char *jsonGetString(json_t *value)
     return rval;
 }
 
+int jsonListCount(json_t *value)
+{
+    int count;
+    json_t *ptr;
+
+    if(!value) return -1;
+
+    if(value->type==JSON_TYPE_ARRAY || value->type==JSON_TYPE_OBJECT) {
+        count=0;
+        for(ptr=value->list; ptr!=NULL; ptr=ptr->next) count++;
+    }
+    return -1;
+
+    return count;
+}
+
 void jsonFree(json_t *value)
 {
     if(!value) return;

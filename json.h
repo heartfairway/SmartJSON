@@ -90,6 +90,7 @@ bool jsonEqBoolean(json_t *value);
 int64_t jsonGetInteger(json_t *value);
 double jsonGetNumeric(json_t *value);
 char *jsonGetString(json_t *value);
+int jsonListCount(json_t *value);
 
 void jsonFree(json_t *value);
 
