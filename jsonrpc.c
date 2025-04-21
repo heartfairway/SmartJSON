@@ -40,6 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "jsonrpc.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 jsonrpc_t *_jsonrpcNew(void);
@@ -50,7 +51,7 @@ inline jsonrpc_t *_jsonrpcNew(void)
     jsonrpc_t *rpc;
 
     rpc=malloc(sizeof(jsonrpc_t));
-    memset(rpc, 0 sizeof(jsonrpc_t));
+    memset(rpc, 0, sizeof(jsonrpc_t));
 
     return rpc;
 }
@@ -93,10 +94,7 @@ jsonrpc_t *_jsonrpcFromObject(json_t *object)
     attr=jsonQuery(object, "params");
     if(attr) { // spec: "this member MAY be omitted"
         if(attr->type==JSON_TYPE_ARRAY || attr->type==JSON_TYPE_OBJECT) {
-            rpc->params=attr->list;
-            // unlink the list from the parsed object
-            attr->type=JSON_TYPE_NULL
-            attr->list=NULL;
+            rpc->params=jsonCopy(attr);
         }
         else {
             // according to spec, params must be structured (array or object)
@@ -109,7 +107,7 @@ jsonrpc_t *_jsonrpcFromObject(json_t *object)
     else if(attr->type==JSON_TYPE_NULL) rpc->reqType=JSONRPC_REQTYPE_NULL;
     else if(attr->type==JSON_TYPE_INTEGER) {
         rpc->reqType=JSONRPC_REQTYPE_INT;
-        rpc->idNum=jsonGetInterger(attr);
+        rpc->idNum=jsonGetInteger(attr);
     }
     else if(attr->type==JSON_TYPE_STRING) {
         rpc->reqType=JSONRPC_REQTYPE_STRING;
@@ -152,7 +150,7 @@ jsonrpc_t *jsonrpcParse(char *str)
     return rpc;
 }
 
-void jsonrpcFillError(jsonrpc_t *rpc, int code, const char *mesage)
+void jsonrpcFillError(jsonrpc_t *rpc, int code, const char *message)
 {
     rpc->errorCode=code;
     rpc->errorMessage=malloc(strlen(message)+1);
@@ -164,17 +162,17 @@ json_t *_jsonrpcRequltError(jsonrpc_t *rpc)
     json_t *jsonPtr, *rval;
 
     // code
-    jsonPtr=malloc(json_t);
+    jsonPtr=malloc(sizeof(json_t));
     jsonFillInteger(jsonPtr, rpc->errorCode);
     jsonLabelName(jsonPtr, "code");
 
     // build return object
-    rval=malloc(json_t);
+    rval=malloc(sizeof(json_t));
     jsonAttachObject(rval, jsonPtr);
 
     // message
     if(rpc->errorMessage) {
-        jsonPtr->next=malloc(json_t);
+        jsonPtr->next=malloc(sizeof(json_t));
         jsonPtr=jsonPtr->next;
         jsonFillString(jsonPtr, rpc->errorMessage);
         jsonLabelName(jsonPtr, "message");
@@ -182,7 +180,7 @@ json_t *_jsonrpcRequltError(jsonrpc_t *rpc)
 
     //data
     if(rpc->errorData) {
-        jsonPtr->next=rpc->errorData;
+        jsonPtr->next=jsonCopy(rpc->errorData);
         jsonPtr=jsonPtr->next;
         jsonLabelName(jsonPtr, "data");
     }
@@ -195,17 +193,17 @@ json_t *_jsonrpcReqult(jsonrpc_t *rpc)
     json_t *jsonPtr, *rval;
 
     // version ("jsonrpc")
-    jsonPtr=malloc(json_t);
+    jsonPtr=malloc(sizeof(json_t));
     jsonFillString(jsonPtr, rpc->version);
     jsonLabelName(jsonPtr, "jsonrpc");
 
     // build return object
-    rval=malloc(json_t);
+    rval=malloc(sizeof(json_t));
     jsonAttachObject(rval, jsonPtr);
 
     // result or error
     if(rpc->errorCode==0 && rpc->result) {
-        jsonPtr->next=rpc->result;
+        jsonPtr->next=jsonCopy(rpc->result);
         jsonPtr=jsonPtr->next;
         jsonLabelName(jsonPtr, "result");
     }
@@ -216,7 +214,7 @@ json_t *_jsonrpcReqult(jsonrpc_t *rpc)
     }
 
     // id
-    jsonPtr->next=malloc(json_t);
+    jsonPtr->next=malloc(sizeof(json_t));
     jsonPtr=jsonPtr->next;
     if(rpc->reqType==JSONRPC_REQTYPE_INT) jsonFillInteger(jsonPtr, rpc->idNum);
     else if(rpc->reqType==JSONRPC_REQTYPE_STRING) jsonFillString(jsonPtr, rpc->idString);
@@ -236,7 +234,7 @@ char *jsonrpcResult(jsonrpc_t *rpc)
     jsonPtr=_jsonrpcReqult(rpc);
 
     if(rpc->next) {
-        root=malloc(json_t);
+        root=malloc(sizeof(json_t));
         jsonAttachArray(root, jsonPtr);
 
         do {
@@ -248,12 +246,12 @@ char *jsonrpcResult(jsonrpc_t *rpc)
     else root=jsonPtr;
 
     rval=jsonGetString(root);
-    ///TODO: should free here, but may cause double free problem later
+    jsonFree(root);
 
     return rval;
 }
 
-void jsonrpcFree(isonrpc_t *rpc)
+void jsonrpcFree(jsonrpc_t *rpc)
 {
     if(!rpc->method) free(rpc->method);
     if(rpc->reqType==JSONRPC_REQTYPE_STRING) free(rpc->idString);

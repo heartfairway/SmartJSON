@@ -52,14 +52,14 @@ extern "C" {
 #define JSONRPC_REQTYPE_STRING  2
 #define JSONRPC_REQTYPE_NOTIFY  3
 
-struct _jsonrpc {
+typedef struct _jsonrpc {
     char version[8];
     char *method;
     uint8_t reqType;
     union {
         int idNum;
-        char *idString
-    }
+        char *idString;
+    };
 
     int errorCode;
     char *errorMessage;
@@ -75,7 +75,7 @@ struct _jsonrpc {
 jsonrpc_t *jsonrpcParse(char *str);
 void jsonrpcFillError(jsonrpc_t *rpc, int code, const char *mesage);
 char *jsonrpcResult(jsonrpc_t *rpc);
-void jsonrpcFree(isonrpc_t *rpc);
+void jsonrpcFree(jsonrpc_t *rpc);
 
 #ifdef __cplusplus
 }

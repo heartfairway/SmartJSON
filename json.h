@@ -94,6 +94,7 @@ double jsonGetNumeric(json_t *value);
 char *jsonGetString(json_t *value);
 int jsonListCount(json_t *value);
 
+json_t *jsonCopy(json_t *value);
 void jsonFree(json_t *value);
 
 #ifdef __cplusplus

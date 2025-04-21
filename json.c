@@ -69,6 +69,8 @@ json_t *_queryObject(json_t *value, char **src);
 void _fillPureValStrBuf(json_t *value, bool esc, char *buf, int *idx);
 void _fillOptStrBuf(json_t *value, char *buf, int *idx);
 
+json_t *_jsonCopy(json_t *value, bool expand);
+
 /************************************
  **  #internat# Utility Functions  **
  ************************************/
@@ -832,6 +834,42 @@ int jsonListCount(json_t *value)
     return -1;
 
     return count;
+}
+
+inline json_t *_jsonCopy(json_t *value, bool expand)
+{
+    json_t *rval;
+
+    if(!value) return NULL;
+
+    rval=malloc(sizeof(json_t));
+    memcpy(rval, value, sizeof(json_t));
+
+    rval->label=NULL;
+    rval->next=NULL;
+
+    if(rval->type==JSON_TYPE_STRING) {
+        rval->string=malloc(strlen(value->string)+1);
+        strcpy(rval->string, value->string);
+    }
+    else if(rval->type==JSON_TYPE_ARRAY || rval->type==JSON_TYPE_OBJECT) {
+        rval->list=_jsonCopy(value->list, true);
+    }
+
+    if(expand) {
+        if(value->label) {
+            rval->label=malloc(strlen(value->label)+1);
+            strcpy(rval->label, value->label);
+        }
+        if(value->next) _jsonCopy(value->next, true);
+    }
+
+    return rval;
+}
+
+json_t *jsonCopy(json_t *value)
+{
+    return _jsonCopy(value, false);
 }
 
 void jsonFree(json_t *value)
