@@ -159,9 +159,98 @@ void jsonrpcFillError(jsonrpc_t *rpc, int code, const char *mesage)
     strcpy(rpc->errorMessage, message);
 }
 
+json_t *_jsonrpcRequltError(jsonrpc_t *rpc)
+{
+    json_t *jsonPtr, *rval;
+
+    // code
+    jsonPtr=malloc(json_t);
+    jsonFillInteger(jsonPtr, rpc->errorCode);
+    jsonLabelName(jsonPtr, "code");
+
+    // build return object
+    rval=malloc(json_t);
+    jsonAttachObject(rval, jsonPtr);
+
+    // message
+    if(rpc->errorMessage) {
+        jsonPtr->next=malloc(json_t);
+        jsonPtr=jsonPtr->next;
+        jsonFillString(jsonPtr, rpc->errorMessage);
+        jsonLabelName(jsonPtr, "message");
+    }
+
+    //data
+    if(rpc->errorData) {
+        jsonPtr->next=rpc->errorData;
+        jsonPtr=jsonPtr->next;
+        jsonLabelName(jsonPtr, "data");
+    }
+
+    return rval;
+}
+
+json_t *_jsonrpcReqult(jsonrpc_t *rpc)
+{
+    json_t *jsonPtr, *rval;
+
+    // version ("jsonrpc")
+    jsonPtr=malloc(json_t);
+    jsonFillString(jsonPtr, rpc->version);
+    jsonLabelName(jsonPtr, "jsonrpc");
+
+    // build return object
+    rval=malloc(json_t);
+    jsonAttachObject(rval, jsonPtr);
+
+    // result or error
+    if(rpc->errorCode==0 && rpc->result) {
+        jsonPtr->next=rpc->result;
+        jsonPtr=jsonPtr->next;
+        jsonLabelName(jsonPtr, "result");
+    }
+    else {
+        jsonPtr->next=_jsonrpcRequltError(rpc);
+        jsonPtr=jsonPtr->next;
+        jsonLabelName(jsonPtr, "error");
+    }
+
+    // id
+    jsonPtr->next=malloc(json_t);
+    jsonPtr=jsonPtr->next;
+    if(rpc->reqType==JSONRPC_REQTYPE_INT) jsonFillInteger(jsonPtr, rpc->idNum);
+    else if(rpc->reqType==JSONRPC_REQTYPE_STRING) jsonFillString(jsonPtr, rpc->idString);
+    else jsonFillNull(jsonPtr);
+    jsonLabelName(jsonPtr, "id");
+
+    return rval;
+}
+
 char *jsonrpcResult(jsonrpc_t *rpc)
 {
+    char *rval;
+    json_t *jsonPtr, *root;
 
+    if(!rpc) return NULL;
+
+    jsonPtr=_jsonrpcReqult(rpc);
+
+    if(rpc->next) {
+        root=malloc(json_t);
+        jsonAttachArray(root, jsonPtr);
+
+        do {
+            rpc=rpc->next;
+            jsonPtr->next=_jsonrpcReqult(rpc);
+            jsonPtr=jsonPtr->next;
+        } while(rpc->next);
+    }
+    else root=jsonPtr;
+
+    rval=jsonGetString(root);
+    ///TODO: should free here, but may cause double free problem later
+
+    return rval;
 }
 
 void jsonrpcFree(isonrpc_t *rpc)

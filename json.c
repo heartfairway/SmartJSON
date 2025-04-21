@@ -155,6 +155,15 @@ bool jsonAttachObject(json_t *dst, json_t *value)
     return true;
 }
 
+bool jsonLabelName(json_t *dst, const char *str)
+{
+    if(!dst || !str) return false;
+    if(dst->label) free(dst->label);
+
+    dst->label=malloc(strlen(str)+1);
+    strcpy(dst->label, str);
+}
+
 /*************************************
  **  #internal# Matching Functions  **
  *************************************/

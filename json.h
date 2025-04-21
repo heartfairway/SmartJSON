@@ -82,6 +82,8 @@ bool jsonFillNumeric(json_t *dst, double value);
 bool jsonAttachArray(json_t *dst, json_t *value);
 bool jsonAttachObject(json_t *dst, json_t *value);
 
+bool jsonLabelName(json_t *dst, const char *str);
+
 json_t *jsonParse(char *str);
 json_t *jsonQuery(json_t *root, char *str);
 
