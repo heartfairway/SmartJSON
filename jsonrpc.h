@@ -57,7 +57,7 @@ typedef struct _jsonrpc {
     char *method;
     uint8_t reqType;
     union {
-        int idNum;
+        int64_t idNum;
         char *idString;
     };
 

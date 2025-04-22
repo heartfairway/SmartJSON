@@ -650,7 +650,7 @@ bool jsonEqBoolean(json_t *value)
     }
 }
 
-int64_t jsonGetInterger(json_t *value)
+int64_t jsonGetInteger(json_t *value)
 {
     if(!value) return 0;
 
@@ -861,7 +861,7 @@ inline json_t *_jsonCopy(json_t *value, bool expand)
             rval->label=malloc(strlen(value->label)+1);
             strcpy(rval->label, value->label);
         }
-        if(value->next) _jsonCopy(value->next, true);
+        if(value->next) rval->next=_jsonCopy(value->next, true);
     }
 
     return rval;

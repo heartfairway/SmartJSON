@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ******/
 
+#include "json.h"
 #include "jsonrpc.h"
 
 #include <stdlib.h>
