@@ -61,17 +61,21 @@ extern "C" {
 #define JSON_ERROR_NONE    0
 #define JSON_ERRPR_PHRASE  1  
 
-typedef struct _json_t {
-    uint8_t type;
-    union {  // this should be 64 bits / 8 bytes in modern 64-bit systems
-        bool           boolean;
-        char           *string;
-        int64_t        integer;
-        double         numeric;
-        struct _json_t *list;
+typedef struct _json {
+    uint8_t fixed:1;
+    uint8_t reference:1;
+    uint8_t type:6;
+
+    union {
+        bool         boolean;
+        char         *string;
+        int64_t      integer;
+        double       numeric;
+        struct _json *list;
     };
-    struct _json_t *next;
-	char *label;
+
+    struct _json *next;
+    char *label;
 } json_t;
 
 bool jsonFillNull(json_t *dst);

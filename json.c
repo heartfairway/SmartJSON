@@ -874,11 +874,11 @@ json_t *jsonCopy(json_t *value)
 
 void jsonFree(json_t *value)
 {
-    if(!value) return;
+    if(!value || value->fixed) return;
 
-    if(value->type==JSON_TYPE_STRING) free(value->string);
+    if(value->type==JSON_TYPE_STRING) if(!value->reference) free(value->string);
     else if(value->type==JSON_TYPE_ARRAY|| value->type==JSON_TYPE_OBJECT) {
-        jsonFree(value->list);
+        if(!value->reference) jsonFree(value->list);
     }
 
     if(value->next) jsonFree(value->next);
