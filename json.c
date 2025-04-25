@@ -61,6 +61,9 @@ char *_skipWhitespace(char **src);
 int _getString(char **src, char *buf);
 json_t *_buildValue(char **src);
 
+bool _jsonSetArray(json_t *dst, json_t *value, bool ref);
+bool _jsonSetObject(json_t *dst, json_t *value, bool ref);
+
 int _strcpyToJsonEsc(char *dest, char *src);
 
 json_t *_queryArray(json_t *value, char **src);
@@ -117,6 +120,17 @@ bool jsonFillString(json_t *dst, char *value)
     return true;
 }
 
+bool jsonRefString(json_t *dst, char *value)
+{
+    if(!value || !_jsonFillZero(dst)) return false;
+
+    dst->type=JSON_TYPE_STRING;
+    dst->string=value;
+    dst->reference=true;
+
+    return true;
+}
+
 bool jsonFillInteger(json_t *dst, int64_t value)
 {
     if(!_jsonFillZero(dst)) return false;
@@ -137,24 +151,46 @@ bool jsonFillNumeric(json_t *dst, double value)
     return true;
 }
 
-bool jsonAttachArray(json_t *dst, json_t *value)
+inline bool _jsonSetArray(json_t *dst, json_t *value, bool ref)
 {
     if(!value || !_jsonFillZero(dst)) return false;
 
     dst->type=JSON_TYPE_ARRAY;
     dst->list=value;
+    dst->reference=ref;
+
+    return true;
+}
+
+bool jsonAttachArray(json_t *dst, json_t *value)
+{
+    return _jsonSetArray(dst, value, false);
+}
+
+bool jsonRefArray(json_t *dst, json_t *value)
+{
+    return _jsonSetArray(dst, value, true);
+}
+
+inline bool _jsonSetObject(json_t *dst, json_t *value, bool ref)
+{
+    if(!value || !_jsonFillZero(dst)) return false;
+
+    dst->type=JSON_TYPE_OBJECT;
+    dst->list=value;
+    dst->reference=ref;
 
     return true;
 }
 
 bool jsonAttachObject(json_t *dst, json_t *value)
 {
-    if(!value || !_jsonFillZero(dst)) return false;
+    return _jsonSetObject(dst, value, false);
+}
 
-    dst->type=JSON_TYPE_OBJECT;
-    dst->list=value;
-
-    return true;
+bool jsonRefObject(json_t *dst, json_t *value)
+{
+    return _jsonSetObject(dst, value, true);
 }
 
 bool jsonLabelName(json_t *dst, const char *str)

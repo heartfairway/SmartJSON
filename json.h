@@ -81,10 +81,13 @@ typedef struct _json {
 bool jsonFillNull(json_t *dst);
 bool jsonFillBoolean(json_t *dst, bool value);
 bool jsonFillString(json_t *dst, char *value);
+bool jsonRefString(json_t *dst, char *value);
 bool jsonFillInteger(json_t *dst, int64_t value);
 bool jsonFillNumeric(json_t *dst, double value);
 bool jsonAttachArray(json_t *dst, json_t *value);
+bool jsonRefArray(json_t *dst, json_t *value);
 bool jsonAttachObject(json_t *dst, json_t *value);
+bool jsonRefObject(json_t *dst, json_t *value);
 
 bool jsonLabelName(json_t *dst, const char *str);
 
