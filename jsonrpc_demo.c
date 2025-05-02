@@ -16,7 +16,7 @@ int main(void)
 	printf("Input:\n  %s \n", input);
 
 	//js1=jsonParse(input);
-	rpc1=jsonrpcParse(input);
+	rpc1=jsonrpcParseRequest(input);
 
 	if(rpc1) {
 		printf("method: %s \n", rpc1->method);

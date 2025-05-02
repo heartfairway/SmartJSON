@@ -72,7 +72,7 @@ typedef struct _jsonrpc {
     struct _jsonrpc *next;
 } jsonrpc_t;
 
-jsonrpc_t *jsonrpcParse(char *str);
+jsonrpc_t *jsonrpcParseRequest(char *str);
 void jsonrpcFillError(jsonrpc_t *rpc, int code, const char *mesage);
 char *jsonrpcResult(jsonrpc_t *rpc);
 void jsonrpcFree(jsonrpc_t *rpc);

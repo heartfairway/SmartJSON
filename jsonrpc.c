@@ -119,7 +119,7 @@ jsonrpc_t *_jsonrpcFromObject(json_t *object)
     return rpc;
 }
 
-jsonrpc_t *jsonrpcParse(char *str)
+jsonrpc_t *jsonrpcParseRequest(char *str)
 {
     jsonrpc_t *rpc, *rpct, *nrpc;
     json_t *root, *data;
