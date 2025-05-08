@@ -153,7 +153,7 @@ bool jsonFillNumeric(json_t *dst, double value)
 
 inline bool _jsonSetArray(json_t *dst, json_t *value, bool ref)
 {
-    if(!value || !_jsonFillZero(dst)) return false;
+    if(!_jsonFillZero(dst)) return false;
 
     dst->type=JSON_TYPE_ARRAY;
     dst->list=value;
@@ -162,7 +162,7 @@ inline bool _jsonSetArray(json_t *dst, json_t *value, bool ref)
     return true;
 }
 
-bool jsonAttachArray(json_t *dst, json_t *value)
+bool jsonSetArray(json_t *dst, json_t *value)
 {
     return _jsonSetArray(dst, value, false);
 }
@@ -174,7 +174,7 @@ bool jsonRefArray(json_t *dst, json_t *value)
 
 inline bool _jsonSetObject(json_t *dst, json_t *value, bool ref)
 {
-    if(!value || !_jsonFillZero(dst)) return false;
+    if(!_jsonFillZero(dst)) return false;
 
     dst->type=JSON_TYPE_OBJECT;
     dst->list=value;
@@ -183,7 +183,7 @@ inline bool _jsonSetObject(json_t *dst, json_t *value, bool ref)
     return true;
 }
 
-bool jsonAttachObject(json_t *dst, json_t *value)
+bool jsonSetObject(json_t *dst, json_t *value)
 {
     return _jsonSetObject(dst, value, false);
 }
@@ -191,6 +191,22 @@ bool jsonAttachObject(json_t *dst, json_t *value)
 bool jsonRefObject(json_t *dst, json_t *value)
 {
     return _jsonSetObject(dst, value, true);
+}
+
+bool jsonInsertList(json_t *dst, json_t *value)
+{
+    json_t *ptr;
+
+    if(!dst || (dst->type!=JSON_TYPE_ARRAY && dst->type!=JSON_TYPE_OBJECT)) return false;
+
+    ptr=dst->list;
+    if(dst->list) {
+        ptr=dst->list;
+        while(ptr->next) ptr=ptr->next;
+
+        ptr->next=value;
+    }
+    else dst->list=value;
 }
 
 bool jsonLabelName(json_t *dst, const char *str)
@@ -439,7 +455,7 @@ json_t *_matchArray(char **src)
     else (*src)++;
 
     rval=malloc(sizeof(json_t));
-    jsonAttachArray(rval, arrayHead);
+    jsonSetArray(rval, arrayHead);
 
     return rval;
 }
@@ -504,7 +520,7 @@ json_t *_matchObject(char **src)
     else (*src)++;
 
     rval=malloc(sizeof(json_t));
-    jsonAttachObject(rval, objectHead);
+    jsonSetObject(rval, objectHead);
 
     return rval;
 }

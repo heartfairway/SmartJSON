@@ -42,6 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __JSONRPC_H__
 
 #include "json.h"
+#include <pthread.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,7 +53,7 @@ extern "C" {
 #define JSONRPC_REQTYPE_STRING  2
 #define JSONRPC_REQTYPE_NOTIFY  3
 
-typedef struct _jsonrpc {
+typedef struct jsonrpc_t {
     char version[8];
     char *method;
     uint8_t reqType;
@@ -69,8 +70,15 @@ typedef struct _jsonrpc {
     json_t *result;
 
     int _sock_fd;
-    struct _jsonrpc *next;
+    struct jsonrpc_t *next;
 } jsonrpc_t;
+
+typedef struct jsonrpc_context_t {
+    int sock_fd;
+    int num_thread;
+    bool run;
+    pthread_t *thread;
+} jsonrpc_context_t;
 
 jsonrpc_t *jsonrpcParseRequest(char *str);
 void jsonrpcFillError(jsonrpc_t *rpc, int code, const char *mesage);

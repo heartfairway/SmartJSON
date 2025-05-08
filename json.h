@@ -61,7 +61,7 @@ extern "C" {
 #define JSON_ERROR_NONE    0
 #define JSON_ERRPR_PHRASE  1  
 
-typedef struct _json {
+typedef struct json_t {
     uint8_t fixed:1;
     uint8_t reference:1;
     uint8_t type:6;
@@ -71,10 +71,10 @@ typedef struct _json {
         char         *string;
         int64_t      integer;
         double       numeric;
-        struct _json *list;
+        struct json_t *list;
     };
 
-    struct _json *next;
+    struct json_t *next;
     char *label;
 } json_t;
 
@@ -84,10 +84,13 @@ bool jsonFillString(json_t *dst, char *value);
 bool jsonRefString(json_t *dst, char *value);
 bool jsonFillInteger(json_t *dst, int64_t value);
 bool jsonFillNumeric(json_t *dst, double value);
-bool jsonAttachArray(json_t *dst, json_t *value);
+
+bool jsonSetArray(json_t *dst, json_t *value);
 bool jsonRefArray(json_t *dst, json_t *value);
-bool jsonAttachObject(json_t *dst, json_t *value);
+bool jsonSetObject(json_t *dst, json_t *value);
 bool jsonRefObject(json_t *dst, json_t *value);
+
+bool jsonInsertList(json_t *dst, json_t *value);
 
 bool jsonLabelName(json_t *dst, const char *str);
 
