@@ -88,12 +88,12 @@ inline bool _jsonFillZero(json_t *dst)
 /*************************
  **  Filling Functions  **
  *************************/
-bool jsonFillNull(json_t *dst)
+bool jsonSetNull(json_t *dst)
 {
     return _jsonFillZero(dst);  // equals to null
 }
 
-bool jsonFillBoolean(json_t *dst, bool value)
+bool jsonSetBoolean(json_t *dst, bool value)
 {
     if(!_jsonFillZero(dst)) return false;
 
@@ -103,7 +103,7 @@ bool jsonFillBoolean(json_t *dst, bool value)
     return true;
 }
 
-bool jsonFillString(json_t *dst, char *value)
+bool jsonSetString(json_t *dst, char *value)
 {
     int len;
 
@@ -131,7 +131,7 @@ bool jsonRefString(json_t *dst, char *value)
     return true;
 }
 
-bool jsonFillInteger(json_t *dst, int64_t value)
+bool jsonSetInteger(json_t *dst, int64_t value)
 {
     if(!_jsonFillZero(dst)) return false;
 
@@ -141,7 +141,7 @@ bool jsonFillInteger(json_t *dst, int64_t value)
     return true;
 }
 
-bool jsonFillNumeric(json_t *dst, double value)
+bool jsonSetNumeric(json_t *dst, double value)
 {
     if(!_jsonFillZero(dst)) return false;
 
@@ -246,7 +246,7 @@ json_t *_matchNull(char **src)
 
     (*src)+=4;
     rval=malloc(sizeof(json_t));
-    jsonFillNull(rval);
+    jsonSetNull(rval);
 
     return rval;
 }
@@ -263,7 +263,7 @@ json_t *_matchBooleanTrue(char **src)
 
     (*src)+=4;
     rval=malloc(sizeof(json_t));
-    jsonFillBoolean(rval, true);
+    jsonSetBoolean(rval, true);
 
     return rval;
 }
@@ -281,7 +281,7 @@ json_t *_matchBooleanFalse(char **src)
 
     (*src)+=5;
     rval=malloc(sizeof(json_t));
-    jsonFillBoolean(rval, false);
+    jsonSetBoolean(rval, false);
 
     return rval;
 }
@@ -356,7 +356,7 @@ json_t *_matchString(char **src)
     }
 
     rval=malloc(sizeof(json_t));
-    if(!jsonFillString(rval, buf)) {
+    if(!jsonSetString(rval, buf)) {
         // error
         return NULL;
     }
@@ -411,8 +411,8 @@ json_t *_matchNumber(char **src)
     buf[i]='\0';
 
     rval=malloc(sizeof(json_t));
-    if(numeric) jsonFillNumeric(rval, strtod(buf, NULL));
-    else jsonFillInteger(rval, strtoll(buf, NULL, 10));
+    if(numeric) jsonSetNumeric(rval, strtod(buf, NULL));
+    else jsonSetInteger(rval, strtoll(buf, NULL, 10));
 
     return rval;
 }

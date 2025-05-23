@@ -67,6 +67,17 @@ inline jsonrpc_t *_jsonrpcError(int code, const char *message)
     return rpc;
 }
 
+bool jsonrpcSetMethod(jsonrpc_t rpc, const char *method)
+{
+    if(!method || !rpc) return false;
+
+    rpc->method=malloc(strlen(method)+1);
+    if(!rpc->method) return false;
+    else strcpy(rpc->method, method);
+
+    return true;
+}
+
 jsonrpc_t *_jsonrpcFromObject(json_t *object)
 {
     jsonrpc_t *rpc;
@@ -76,20 +87,18 @@ jsonrpc_t *_jsonrpcFromObject(json_t *object)
         return _jsonrpcError(-32600, "Invalid request");
     }
 
-    rpc=_jsonrpcNew();
-
     attr=jsonQuery(object, "jsonrpc");
     if(!attr || attr->type!=JSON_TYPE_STRING || strlen(attr->string)>7) {
-        jsonrpcFillError(rpc, -32600, "Invalid request");
-        return rpc;
+        return _jsonrpcError(-32600, "Invalid request");
     }
-    strcpy(rpc->version, attr->string);
+    ///TODO: check version
 
     attr=jsonQuery(object, "method");
     if(!attr || attr->type!=JSON_TYPE_STRING) {
-        jsonrpcFillError(rpc, -32600, "Invalid request");
-        return rpc;
+        return _jsonrpcError(rpc, -32600, "Invalid request");
     }
+
+    rpc=_jsonrpcNew();
     rpc->method=jsonGetString(attr);
 
     attr=jsonQuery(object, "params");
@@ -164,18 +173,18 @@ json_t *_jsonrpcRequltError(jsonrpc_t *rpc)
 
     // code
     jsonPtr=malloc(sizeof(json_t));
-    jsonFillInteger(jsonPtr, rpc->errorCode);
+    jsonSetInteger(jsonPtr, rpc->errorCode);
     jsonLabelName(jsonPtr, "code");
 
     // build return object
     rval=malloc(sizeof(json_t));
-    jsonAttachObject(rval, jsonPtr);
+    jsonSetObject(rval, jsonPtr);
 
     // message
     if(rpc->errorMessage) {
         jsonPtr->next=malloc(sizeof(json_t));
         jsonPtr=jsonPtr->next;
-        jsonFillString(jsonPtr, rpc->errorMessage);
+        jsonSetString(jsonPtr, rpc->errorMessage);
         jsonLabelName(jsonPtr, "message");
     }
 
@@ -195,12 +204,12 @@ json_t *_jsonrpcReqult(jsonrpc_t *rpc)
 
     // version ("jsonrpc")
     jsonPtr=malloc(sizeof(json_t));
-    jsonFillString(jsonPtr, rpc->version);
+    jsonSetString(jsonPtr, rpc->version);
     jsonLabelName(jsonPtr, "jsonrpc");
 
     // build return object
     rval=malloc(sizeof(json_t));
-    jsonAttachObject(rval, jsonPtr);
+    jsonSetObject(rval, jsonPtr);
 
     // result or error
     if(rpc->errorCode==0 && rpc->result) {
@@ -217,9 +226,9 @@ json_t *_jsonrpcReqult(jsonrpc_t *rpc)
     // id
     jsonPtr->next=malloc(sizeof(json_t));
     jsonPtr=jsonPtr->next;
-    if(rpc->reqType==JSONRPC_REQTYPE_INT) jsonFillInteger(jsonPtr, rpc->idNum);
-    else if(rpc->reqType==JSONRPC_REQTYPE_STRING) jsonFillString(jsonPtr, rpc->idString);
-    else jsonFillNull(jsonPtr);
+    if(rpc->reqType==JSONRPC_REQTYPE_INT) jsonSetInteger(jsonPtr, rpc->idNum);
+    else if(rpc->reqType==JSONRPC_REQTYPE_STRING) jsonSetString(jsonPtr, rpc->idString);
+    else jsonSetNull(jsonPtr);
     jsonLabelName(jsonPtr, "id");
 
     return rval;
@@ -236,7 +245,7 @@ char *jsonrpcResult(jsonrpc_t *rpc)
 
     if(rpc->next) {
         root=malloc(sizeof(json_t));
-        jsonAttachArray(root, jsonPtr);
+        jsonSetArray(root, jsonPtr);
 
         do {
             rpc=rpc->next;
@@ -254,7 +263,7 @@ char *jsonrpcResult(jsonrpc_t *rpc)
 
 void jsonrpcFree(jsonrpc_t *rpc)
 {
-    if(!rpc->method) free(rpc->method);
+    /*if(!rpc->method) free(rpc->method);
     if(rpc->reqType==JSONRPC_REQTYPE_STRING) free(rpc->idString);
     if(rpc->errorMessage) free(rpc->errorMessage);
     if(rpc->errorData) jsonFree(rpc->errorData);
@@ -262,5 +271,5 @@ void jsonrpcFree(jsonrpc_t *rpc)
     if(rpc->result) jsonFree(rpc->result);
     if(rpc->next) jsonrpcFree(rpc->next);
 
-    free(rpc);
+    free(rpc);*/
 }

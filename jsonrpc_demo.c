@@ -27,7 +27,7 @@ int main(void)
 	else printf("Parse error. \n");
 
 	rpc1->result=malloc(sizeof(json_t));
-	jsonFillInteger(rpc1->result, 96);
+	jsonSetInteger(rpc1->result, 96);
 
 	output=jsonrpcResult(rpc1);
 	printf("Output:\n  %s \n", output);

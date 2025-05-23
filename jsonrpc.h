@@ -53,14 +53,48 @@ extern "C" {
 #define JSONRPC_REQTYPE_STRING  2
 #define JSONRPC_REQTYPE_NOTIFY  3
 
+#define JSONRPC_UNDEFINED     0
+#define JSONRPC_REQUEST       1
+#define JSONRPC_NOTIFICATION  2 
+#define JSONRPC_RESPONSE      3
+#define JSONRPC_ERROR         4
+
 typedef struct jsonrpc_t {
-    char version[8];
+    uint8_t type;
+
+    int errorCode;
+    union {
+        char *method;
+        char *errorMessage;
+    };
+    union {
+        json_t *params;
+        json_t *result;
+        json_t *errorData;
+    };
+    json_t *id;
+
+    struct jsonrpc_t *next;
+} jsonrpc_t;
+
+/*typedef struct jsonrpc_t {
+    uint8_t reference:1;
+    uint8_t error:1;
+    uint8_t type:6;
+
+    // --
+    char *version;
+    // --
     char *method;
+    
+    json_t *id;
+    // --
     uint8_t reqType;
     union {
         int64_t idNum;
         char *idString;
     };
+    // --
 
     int errorCode;
     char *errorMessage;
@@ -69,20 +103,30 @@ typedef struct jsonrpc_t {
     json_t *params;
     json_t *result;
 
-    int _sock_fd;
-    struct jsonrpc_t *next;
-} jsonrpc_t;
+    //json_t *json;
 
-typedef struct jsonrpc_context_t {
-    int sock_fd;
+    //struct jsonrpc_t *next;
+} jsonrpc_t;*/
+
+/*typedef struct jsonrpc_context_t {
+    int listen_sock;
     int num_thread;
     bool run;
     pthread_t *thread;
-} jsonrpc_context_t;
+} jsonrpc_context_t;*/
+
+bool jsonrpcSetMethod(jsonrpc_t rpc, const char *method);
 
 jsonrpc_t *jsonrpcParseRequest(char *str);
 void jsonrpcFillError(jsonrpc_t *rpc, int code, const char *mesage);
 char *jsonrpcResult(jsonrpc_t *rpc);
+
+jsonrpc_t *jsonrpcDecodeRequest(char *str);
+char *jsonrpcEncodeRequest(jsonrpc_t *rpc);
+
+jsonrpc_t *jsonrpcDecodeResponse(char *str);
+char *jsonrpcEncodeResponse(jsonrpc_t *rpc);
+
 void jsonrpcFree(jsonrpc_t *rpc);
 
 #ifdef __cplusplus

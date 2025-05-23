@@ -78,12 +78,12 @@ typedef struct json_t {
     char *label;
 } json_t;
 
-bool jsonFillNull(json_t *dst);
-bool jsonFillBoolean(json_t *dst, bool value);
-bool jsonFillString(json_t *dst, char *value);
+bool jsonSetNull(json_t *dst);
+bool jsonSetBoolean(json_t *dst, bool value);
+bool jsonSetString(json_t *dst, char *value);
 bool jsonRefString(json_t *dst, char *value);
-bool jsonFillInteger(json_t *dst, int64_t value);
-bool jsonFillNumeric(json_t *dst, double value);
+bool jsonSetInteger(json_t *dst, int64_t value);
+bool jsonSetNumeric(json_t *dst, double value);
 
 bool jsonSetArray(json_t *dst, json_t *value);
 bool jsonRefArray(json_t *dst, json_t *value);
