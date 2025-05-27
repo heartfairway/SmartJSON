@@ -77,44 +77,6 @@ typedef struct jsonrpc_t {
     struct jsonrpc_t *next;
 } jsonrpc_t;
 
-/*typedef struct jsonrpc_t {
-    uint8_t reference:1;
-    uint8_t error:1;
-    uint8_t type:6;
-
-    // --
-    char *version;
-    // --
-    char *method;
-    
-    json_t *id;
-    // --
-    uint8_t reqType;
-    union {
-        int64_t idNum;
-        char *idString;
-    };
-    // --
-
-    int errorCode;
-    char *errorMessage;
-    json_t *errorData;
-
-    json_t *params;
-    json_t *result;
-
-    //json_t *json;
-
-    //struct jsonrpc_t *next;
-} jsonrpc_t;*/
-
-/*typedef struct jsonrpc_context_t {
-    int listen_sock;
-    int num_thread;
-    bool run;
-    pthread_t *thread;
-} jsonrpc_context_t;*/
-
 jsonrpc_t *jsonrpcNew(const char *m, int type);
 jsonrpc_t *jsonrpcError(int code, const char *message);
 json_t *jsonrpcSetParams(jsonrpc_t *rpc, json_t *params);
@@ -128,16 +90,6 @@ jsonrpc_t *jsonrpcParseRequest(char *str);
 jsonrpc_t *jsonrpcParseResponse(char *str);
 
 void jsonrpcFree(jsonrpc_t *rpc);
-
-/*
-char *jsonrpcResult(jsonrpc_t *rpc);
-
-jsonrpc_t *jsonrpcDecodeRequest(char *str);
-char *jsonrpcEncodeRequest(jsonrpc_t *rpc);
-
-jsonrpc_t *jsonrpcDecodeResponse(char *str);
-char *jsonrpcEncodeResponse(jsonrpc_t *rpc);
-*/
 
 #ifdef __cplusplus
 }
