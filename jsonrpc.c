@@ -41,64 +41,171 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "json.h"
 #include "jsonrpc.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-jsonrpc_t *_jsonrpcNew(void);
-jsonrpc_t *_jsonrpcError(int code, const char *message);
+/* forward reference declaration */
 
-inline jsonrpc_t *_jsonrpcNew(void)
+/* RPC Creation */
+jsonrpc_t *jsonrpcNew(const char *m, int type)
 {
     jsonrpc_t *rpc;
 
     rpc=malloc(sizeof(jsonrpc_t));
     memset(rpc, 0, sizeof(jsonrpc_t));
+    rpc->type=type;
+
+    rpc->method=malloc(strlen(m)+1);
+    strcpy(rpc->method, m);
 
     return rpc;
 }
 
-inline jsonrpc_t *_jsonrpcError(int code, const char *message)
+jsonrpc_t *jsonrpcError(int code, const char *message)
 {
     jsonrpc_t *rpc;
 
-    rpc=_jsonrpcNew();
-    jsonrpcFillError(rpc, code, message);
+    rpc=jsonrpcNew(message, JSONRPC_ERROR);
+    rpc->errorCode=code;
 
     return rpc;
 }
 
-bool jsonrpcSetMethod(jsonrpc_t rpc, const char *method)
+json_t *jsonrpcSetParams(jsonrpc_t *rpc, json_t *params)
 {
-    if(!method || !rpc) return false;
+    if(!rpc) return NULL;
 
-    rpc->method=malloc(strlen(method)+1);
-    if(!rpc->method) return false;
-    else strcpy(rpc->method, method);
-
-    return true;
+    rpc->params=jsonCopy(params);
+    return rpc->params;
 }
 
-jsonrpc_t *_jsonrpcFromObject(json_t *object)
+json_t *jsonrpcSetIdNull(jsonrpc_t *rpc)
+{
+    if(!rpc) return NULL;
+
+    rpc->id=malloc(sizeof(json_t));
+    jsonSetNull(rpc->id);
+    return rpc->id;
+}
+
+json_t *jsonrpcSetIdInteger(jsonrpc_t *rpc, int64_t id)
+{
+    if(!rpc) return NULL;
+
+    rpc->id=malloc(sizeof(json_t));
+    jsonSetInteger(rpc->id, id);
+    return rpc->id;
+}
+
+json_t *jsonrpcSetIdString(jsonrpc_t *rpc, char *id)
+{
+    if(!rpc) return NULL;
+
+    rpc->id=malloc(sizeof(json_t));
+    jsonSetString(rpc->id, id);
+    return rpc->id;
+}
+
+/* RPC Export */
+int _jsonrpcExportObject(jsonrpc_t *rpc, char *buf)
+{
+    char *str;
+    int len;
+
+    len=sprintf(buf, "{\"jsonrpc\": \"2.0\"");
+
+    switch(rpc->type) {
+        case JSONRPC_REQUEST:
+        case JSONRPC_NOTIFICATION:
+            len+=sprintf(&buf[len], ", \"method\": \"%s\"", rpc->method);
+            if(rpc->params) {
+                str=jsonGetString(rpc->params);
+                len+=sprintf(&buf[len], ", \"params\": %s", str);
+                free(str);
+            }
+            break;
+        case JSONRPC_RESPONSE:
+            str=jsonGetString(rpc->result);
+            len+=sprintf(&buf[len], ", \"result\": %s", str);
+            free(str);
+            break;
+        case JSONRPC_ERROR:
+            len+=sprintf(&buf[len], ", \"error\": {\"code\": $d, \"message\": %s", rpc->errorCode, rpc->errorMessage);
+            if(rpc->errorData) {
+                str=jsonGetString(rpc->errorData);
+                len+=sprintf(&buf[len], ", \"data\": %s", str);
+                free(str);
+            }
+            buf[len++]='}';
+            break;
+    }
+
+    if(rpc->type!=JSONRPC_NOTIFICATION && rpc->id) {
+        str=jsonGetString(rpc->id);
+        len+=sprintf(&buf[len], ", \"id\": %s", str);
+        free(str);
+    }
+
+    buf[len++]='}';
+    
+    return len;
+}
+
+char *jsonrpcExport(jsonrpc_t *rpc)
+{
+    char buf[4096];
+    char *str;
+    int len;
+
+    if(!rpc || rpc->type==JSONRPC_UNDEFINED) return NULL;
+
+    if(rpc->next) {
+        len=0;
+        buf[len++]='[';
+        while(rpc) {
+            len+=_jsonrpcExportObject(rpc, &buf[len]);
+            buf[len++]=',';
+            buf[len++]=' ';
+            rpc=rpc->next;
+        }
+        len-=2;
+        buf[len++]=']';
+    }
+    else {
+        len=_jsonrpcExportObject(rpc, buf);
+    }
+
+    buf[len++]='\0';
+
+    str=malloc(len);
+    strcpy(str, buf);
+
+    return str;
+}
+
+/* RPC Parsing */
+jsonrpc_t *_jsonrpcReqFromObject(json_t *object)
 {
     jsonrpc_t *rpc;
     json_t *attr;
 
     if(object->type!=JSON_TYPE_OBJECT) {
-        return _jsonrpcError(-32600, "Invalid request");
+        return jsonrpcError(-32600, "Invalid request");
     }
 
     attr=jsonQuery(object, "jsonrpc");
     if(!attr || attr->type!=JSON_TYPE_STRING || strlen(attr->string)>7) {
-        return _jsonrpcError(-32600, "Invalid request");
+        return jsonrpcError(-32600, "Invalid request");
     }
     ///TODO: check version
 
     attr=jsonQuery(object, "method");
     if(!attr || attr->type!=JSON_TYPE_STRING) {
-        return _jsonrpcError(rpc, -32600, "Invalid request");
+        return jsonrpcError(-32600, "Invalid request");
     }
-
-    rpc=_jsonrpcNew();
+    rpc=malloc(sizeof(jsonrpc_t));
+    memset(rpc, 0, sizeof(jsonrpc_t));
     rpc->method=jsonGetString(attr);
 
     attr=jsonQuery(object, "params");
@@ -106,24 +213,25 @@ jsonrpc_t *_jsonrpcFromObject(json_t *object)
         if(attr->type==JSON_TYPE_ARRAY || attr->type==JSON_TYPE_OBJECT) {
             rpc->params=jsonCopy(attr);
         }
-        else {
-            // according to spec, params must be structured (array or object)
-            jsonrpcFillError(rpc, -32602, "Invalid params");
+        else { // according to spec, params must be structured (array or object)
+            jsonrpcFree(rpc);
+            return jsonrpcError(-32602, "Invalid params");
         }
     }
 
     attr=jsonQuery(object, "id");
-    if(!attr) rpc->reqType==JSONRPC_REQTYPE_NOTIFY;
-    else if(attr->type==JSON_TYPE_NULL) rpc->reqType=JSONRPC_REQTYPE_NULL;
-    else if(attr->type==JSON_TYPE_INTEGER) {
-        rpc->reqType=JSONRPC_REQTYPE_INT;
-        rpc->idNum=jsonGetInteger(attr);
+    if(!attr) rpc->type=JSONRPC_NOTIFICATION;
+    else{
+        rpc->type=JSONRPC_REQUEST;
+
+        if(attr->type==JSON_TYPE_INTEGER || attr->type==JSON_TYPE_STRING || attr->type==JSON_TYPE_NULL) {
+            rpc->id=jsonCopy(attr);
+        }
+        else {
+            jsonrpcFree(rpc);
+            return jsonrpcError(-32600, "Invalid request");
+        }
     }
-    else if(attr->type==JSON_TYPE_STRING) {
-        rpc->reqType=JSONRPC_REQTYPE_STRING;
-        rpc->idString=jsonGetString(attr);
-    }
-    else jsonrpcFillError(rpc, -32600, "Invalid request");
 
     return rpc;
 }
@@ -135,14 +243,20 @@ jsonrpc_t *jsonrpcParseRequest(char *str)
     
     root=jsonParse(str);
 
-    if(!root) rpc=_jsonrpcError(-32700, "Parse error");
+    if(!root) {
+        data=NULL;
+        rpc=jsonrpcError(-32700, "Parse error");
+    }
     else if(root->type==JSON_TYPE_OBJECT) data=root;
     else if(root->type==JSON_TYPE_ARRAY) data=root->list;
-    else rpc=_jsonrpcError(-32600, "Invalid request");
+    else {
+        data=NULL;
+        rpc=jsonrpcError(-32600, "Invalid request");
+    }
 
     rpc=NULL;
     while(data) {
-        nrpc=_jsonrpcFromObject(data);
+        nrpc=_jsonrpcReqFromObject(data);
 
         if(!rpc) {
             rpc=nrpc;
@@ -160,13 +274,95 @@ jsonrpc_t *jsonrpcParseRequest(char *str)
     return rpc;
 }
 
-void jsonrpcFillError(jsonrpc_t *rpc, int code, const char *message)
+jsonrpc_t *_jsonrpcResFromObject(json_t *object)
 {
-    rpc->errorCode=code;
-    rpc->errorMessage=malloc(strlen(message)+1);
-    strcpy(rpc->errorMessage, message);
+    jsonrpc_t *rpc;
+    json_t *attr;
+
+    if(object->type!=JSON_TYPE_OBJECT) {
+        return jsonrpcError(-100, "Invalid response");
+    }
+
+    attr=jsonQuery(object, "jsonrpc");
+    if(!attr || attr->type!=JSON_TYPE_STRING || strlen(attr->string)>7) {
+        return jsonrpcError(-100, "Invalid response");
+    }
+    ///TODO: check version
+
+    rpc=malloc(sizeof(jsonrpc_t));
+    memset(rpc, 0, sizeof(jsonrpc_t));
+
+    ///TODO: result and error are mutual exclusive
+    attr=jsonQuery(object, "result");
+    if(attr) {
+        rpc->type=JSONRPC_RESPONSE;
+        rpc->result=jsonCopy(attr);
+    }
+
+    attr=jsonQuery(object, "error");
+    if(attr) {
+        rpc->type=JSONRPC_ERROR;
+
+        attr=jsonQuery(object, "error.code");
+        rpc->errorCode=jsonGetInteger(attr);
+
+        attr=jsonQuery(object, "error.message");
+        if(attr) rpc->errorMessage=jsonGetString(attr);
+
+        attr=jsonQuery(object, "error.data");
+        if(attr) rpc->errorData=jsonCopy(attr);
+    }
+
+    attr=jsonQuery(object, "id");
+    if(attr) rpc->id=jsonCopy(attr);
 }
 
+jsonrpc_t *jsonrpcParseResponse(char *str)
+{
+    jsonrpc_t *rpc, *rpct, *nrpc;
+    json_t *root, *data;
+    
+    root=jsonParse(str);
+
+    if(!root) data=NULL;
+    else if(root->type==JSON_TYPE_OBJECT) data=root;
+    else if(root->type==JSON_TYPE_ARRAY) data=root->list;
+    else data=NULL;
+
+    rpc=NULL;
+    while(data) {
+        nrpc=_jsonrpcResFromObject(data);
+
+        if(!rpc) {
+            rpc=nrpc;
+            rpct=rpc;
+        }
+        else {
+            rpct->next=nrpc;
+            rpct=rpct->next;
+        }
+
+        data=data->next;
+    }
+
+    jsonFree(root);
+    return rpc;
+}
+
+/* clean up */
+void jsonrpcFree(jsonrpc_t *rpc)
+{
+    if(rpc->method) free(rpc->method);
+    if(rpc->params) jsonFree(rpc->params);
+    if(rpc->id) jsonFree(rpc->id);
+    if(rpc->next) jsonrpcFree(rpc->next);
+
+    free(rpc);
+}
+
+
+
+/*
 json_t *_jsonrpcRequltError(jsonrpc_t *rpc)
 {
     json_t *jsonPtr, *rval;
@@ -260,16 +456,4 @@ char *jsonrpcResult(jsonrpc_t *rpc)
 
     return rval;
 }
-
-void jsonrpcFree(jsonrpc_t *rpc)
-{
-    /*if(!rpc->method) free(rpc->method);
-    if(rpc->reqType==JSONRPC_REQTYPE_STRING) free(rpc->idString);
-    if(rpc->errorMessage) free(rpc->errorMessage);
-    if(rpc->errorData) jsonFree(rpc->errorData);
-    if(rpc->params) jsonFree(rpc->params);
-    if(rpc->result) jsonFree(rpc->result);
-    if(rpc->next) jsonrpcFree(rpc->next);
-
-    free(rpc);*/
-}
+*/

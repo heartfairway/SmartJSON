@@ -115,10 +115,21 @@ typedef struct jsonrpc_t {
     pthread_t *thread;
 } jsonrpc_context_t;*/
 
-bool jsonrpcSetMethod(jsonrpc_t rpc, const char *method);
+jsonrpc_t *jsonrpcNew(const char *m, int type);
+jsonrpc_t *jsonrpcError(int code, const char *message);
+json_t *jsonrpcSetParams(jsonrpc_t *rpc, json_t *params);
+json_t *jsonrpcSetIdNull(jsonrpc_t *rpc);
+json_t *jsonrpcSetIdInteger(jsonrpc_t *rpc, int64_t id);
+json_t *jsonrpcSetIdString(jsonrpc_t *rpc, char *id);
+
+char *jsonrpcExport(jsonrpc_t *rpc);
 
 jsonrpc_t *jsonrpcParseRequest(char *str);
-void jsonrpcFillError(jsonrpc_t *rpc, int code, const char *mesage);
+jsonrpc_t *jsonrpcParseResponse(char *str);
+
+void jsonrpcFree(jsonrpc_t *rpc);
+
+/*
 char *jsonrpcResult(jsonrpc_t *rpc);
 
 jsonrpc_t *jsonrpcDecodeRequest(char *str);
@@ -126,8 +137,7 @@ char *jsonrpcEncodeRequest(jsonrpc_t *rpc);
 
 jsonrpc_t *jsonrpcDecodeResponse(char *str);
 char *jsonrpcEncodeResponse(jsonrpc_t *rpc);
-
-void jsonrpcFree(jsonrpc_t *rpc);
+*/
 
 #ifdef __cplusplus
 }
