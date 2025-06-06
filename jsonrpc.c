@@ -105,6 +105,19 @@ json_t *jsonrpcSetIdString(jsonrpc_t *rpc, char *id)
     return rpc->id;
 }
 
+int jsonrpcNumParams(jsonrpc_t *rpc)
+{
+    int n;
+    json_t *param;
+
+    if(!rpc || !rpc->params) return 0;
+
+    n=0;
+    for(param=rpc->params->list; param!=NULL; param=param->next) n++;
+
+    return n;
+}
+
 /* RPC Export */
 int _jsonrpcExportObject(jsonrpc_t *rpc, char *buf)
 {

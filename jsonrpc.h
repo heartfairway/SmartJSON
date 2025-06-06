@@ -84,6 +84,8 @@ json_t *jsonrpcSetIdNull(jsonrpc_t *rpc);
 json_t *jsonrpcSetIdInteger(jsonrpc_t *rpc, int64_t id);
 json_t *jsonrpcSetIdString(jsonrpc_t *rpc, char *id);
 
+int jsonrpcNumParams(jsonrpc_t *rpc);
+
 char *jsonrpcExport(jsonrpc_t *rpc);
 
 jsonrpc_t *jsonrpcParseRequest(char *str);
