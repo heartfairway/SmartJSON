@@ -60,6 +60,16 @@ jsonrpc_t *jsonrpcNew(const char *m, int type)
     return rpc;
 }
 
+jsonrpc_t *jsonrpcRequest(const char *m)
+{
+    return jsonrpcNew(m, JSONRPC_REQUEST);
+}
+
+jsonrpc_t *jsonrpcNotification(const char *m)
+{
+    return jsonrpcNew(m, JSONRPC_NOTIFICATION);
+}
+
 jsonrpc_t *jsonrpcResult(json_t *result)
 {
     jsonrpc_t *rpc;

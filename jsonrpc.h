@@ -78,6 +78,8 @@ typedef struct jsonrpc_t {
 } jsonrpc_t;
 
 jsonrpc_t *jsonrpcNew(const char *m, int type);
+jsonrpc_t *jsonrpcRequest(const char *m);
+jsonrpc_t *jsonrpcNotification(const char *m);
 jsonrpc_t *jsonrpcResult(json_t *result);
 jsonrpc_t *jsonrpcError(int code, const char *message);
 json_t *jsonrpcSetParams(jsonrpc_t *rpc, json_t *params);
