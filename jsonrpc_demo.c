@@ -75,5 +75,13 @@ int main(void)
     printf("params(2): %s \n", temp);
     free(temp);
 
+    printf("------\n");
+    jsonrpcFree(rpc1);
+
+    rpc1=jsonrpcResult(js2);
+    jsonrpcSetIdInteger(rpc1, 17);
+    output=jsonrpcExport(rpc1);
+    printf("Output:\n  %s \n", output);
+
     return 0;
 }

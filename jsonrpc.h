@@ -48,10 +48,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-#define JSONRPC_REQTYPE_NULL    0
+/*#define JSONRPC_REQTYPE_NULL    0
 #define JSONRPC_REQTYPE_INT     1
 #define JSONRPC_REQTYPE_STRING  2
-#define JSONRPC_REQTYPE_NOTIFY  3
+#define JSONRPC_REQTYPE_NOTIFY  3*/
 
 #define JSONRPC_UNDEFINED     0
 #define JSONRPC_REQUEST       1
@@ -78,6 +78,7 @@ typedef struct jsonrpc_t {
 } jsonrpc_t;
 
 jsonrpc_t *jsonrpcNew(const char *m, int type);
+jsonrpc_t *jsonrpcResult(json_t *result);
 jsonrpc_t *jsonrpcError(int code, const char *message);
 json_t *jsonrpcSetParams(jsonrpc_t *rpc, json_t *params);
 json_t *jsonrpcSetIdNull(jsonrpc_t *rpc);

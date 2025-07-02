@@ -60,6 +60,19 @@ jsonrpc_t *jsonrpcNew(const char *m, int type)
     return rpc;
 }
 
+jsonrpc_t *jsonrpcResult(json_t *result)
+{
+    jsonrpc_t *rpc;
+
+    rpc=malloc(sizeof(jsonrpc_t));
+    memset(rpc, 0, sizeof(jsonrpc_t));
+    rpc->type=JSONRPC_RESPONSE;
+
+    rpc->result=jsonCopy(result);
+
+    return rpc;
+}
+
 jsonrpc_t *jsonrpcError(int code, const char *message)
 {
     jsonrpc_t *rpc;
