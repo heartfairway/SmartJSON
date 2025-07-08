@@ -161,7 +161,10 @@ int _jsonrpcExportObject(jsonrpc_t *rpc, char *buf)
             break;
         case JSONRPC_RESPONSE:
             str=jsonGetString(rpc->result);
-            len+=sprintf(&buf[len], ", \"result\": %s", str);
+
+            if(rpc->result->type==JSON_TYPE_STRING) len+=sprintf(&buf[len], ", \"result\": \"%s\"", str);
+            else len+=sprintf(&buf[len], ", \"result\": %s", str);
+
             free(str);
             break;
         case JSONRPC_ERROR:
@@ -349,6 +352,8 @@ jsonrpc_t *_jsonrpcResFromObject(json_t *object)
 
     attr=jsonQuery(object, "id");
     if(attr) rpc->id=jsonCopy(attr);
+
+    return rpc;
 }
 
 jsonrpc_t *jsonrpcParseResponse(char *str)
@@ -358,7 +363,7 @@ jsonrpc_t *jsonrpcParseResponse(char *str)
     
     root=jsonParse(str);
 
-    if(!root) data=NULL;
+    if(!root) return NULL;
     else if(root->type==JSON_TYPE_OBJECT) data=root;
     else if(root->type==JSON_TYPE_ARRAY) data=root->list;
     else data=NULL;
