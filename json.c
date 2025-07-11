@@ -630,7 +630,7 @@ inline json_t *_queryObject(json_t *value, char **src)
     else return NULL;
 }
 
-json_t *jsonQuery(json_t *root, char *str)
+json_t *jsonQuery(json_t *root, const char *str)
 {
     json_t *currentLevel, *accessPtr;
 
@@ -641,8 +641,8 @@ json_t *jsonQuery(json_t *root, char *str)
 
     currentLevel=root;
     while(*str!='\0') {
-        if(currentLevel->type==JSON_TYPE_ARRAY) accessPtr=_queryArray(currentLevel, &str);
-        else if(currentLevel->type==JSON_TYPE_OBJECT) accessPtr=_queryObject(currentLevel, &str);
+        if(currentLevel->type==JSON_TYPE_ARRAY) accessPtr=_queryArray(currentLevel, (char **)&str);
+        else if(currentLevel->type==JSON_TYPE_OBJECT) accessPtr=_queryObject(currentLevel, (char **)&str);
         else return NULL;
 
         if(!accessPtr) break; 

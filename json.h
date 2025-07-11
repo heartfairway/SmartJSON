@@ -95,7 +95,7 @@ bool jsonInsertList(json_t *dst, json_t *value);
 bool jsonLabelName(json_t *dst, const char *str);
 
 json_t *jsonParse(char *str);
-json_t *jsonQuery(json_t *root, char *str);
+json_t *jsonQuery(json_t *root, const char *str);
 
 bool jsonEqNull(json_t *value);
 bool jsonEqBoolean(json_t *value);
