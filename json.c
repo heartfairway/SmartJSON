@@ -103,7 +103,7 @@ bool jsonSetBoolean(json_t *dst, bool value)
     return true;
 }
 
-bool jsonSetString(json_t *dst, char *value)
+bool jsonSetString(json_t *dst, const char *value)
 {
     int len;
 

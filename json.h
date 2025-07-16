@@ -80,7 +80,7 @@ typedef struct json_t {
 
 bool jsonSetNull(json_t *dst);
 bool jsonSetBoolean(json_t *dst, bool value);
-bool jsonSetString(json_t *dst, char *value);
+bool jsonSetString(json_t *dst, const char *value);
 bool jsonRefString(json_t *dst, char *value);
 bool jsonSetInteger(json_t *dst, int64_t value);
 bool jsonSetNumeric(json_t *dst, double value);
