@@ -794,7 +794,7 @@ inline void _fillPureValStrBuf(json_t *value, bool esc, char *buf, int *idx)
             }
             break;
         case JSON_TYPE_INTEGER:
-            (*idx)+=sprintf(&buf[*idx], "%lld", value->integer);
+            (*idx)+=sprintf(&buf[*idx], "%ld", value->integer);
             break;
         case JSON_TYPE_NUMERIC:
             (*idx)+=sprintf(&buf[*idx], "%f", value->numeric);

@@ -168,7 +168,7 @@ int _jsonrpcExportObject(jsonrpc_t *rpc, char *buf)
             free(str);
             break;
         case JSONRPC_ERROR:
-            len+=sprintf(&buf[len], ", \"error\": {\"code\": $d, \"message\": %s", rpc->errorCode, rpc->errorMessage);
+            len+=sprintf(&buf[len], ", \"error\": {\"code\": %d, \"message\": %s", rpc->errorCode, rpc->errorMessage);
             if(rpc->errorData) {
                 str=jsonGetString(rpc->errorData);
                 len+=sprintf(&buf[len], ", \"data\": %s", str);
